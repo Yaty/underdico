@@ -2,8 +2,11 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { WordsService } from './words.service';
 import { CreateWordDto } from './dto/create-word.dto';
 import { Word } from './interfaces/word.interface';
+import { AggregatedWord } from './interfaces/aggregated-word.interface';
+import { ApiUseTags } from '@nestjs/swagger';
 
 @Controller('words')
+@ApiUseTags('users')
 export class WordsController {
   constructor(private readonly wordsService: WordsService) {}
 
@@ -13,7 +16,7 @@ export class WordsController {
   }
 
   @Get()
-  findAll(@Query() query): Promise<Word[]> {
+  findAll(@Query() query): Promise<AggregatedWord[]> {
     const take = query.take || 25;
     const skip = query.skip || 0;
 
