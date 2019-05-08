@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const hostDomain = AppModule.isDev ? `${AppModule.host}:${AppModule.port}` : AppModule.host;
 
-  SwaggerModule.setup('api', app, SwaggerModule.createDocument(
+  SwaggerModule.setup('/swagger-ui.html', app, SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
       .setTitle('Underdico')
@@ -14,9 +16,19 @@ async function bootstrap() {
       .addTag('users')
       .addTag('words')
       .build(),
-  ));
+  ), {
+    swaggerUrl: `${hostDomain}/api/docs-json`,
+    explorer: true,
+    swaggerOptions: {
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+    },
+  });
 
-  await app.listen(3000);
+  app.setGlobalPrefix('api');
+  app.useGlobalFilters(new HttpExceptionFilter());
+  await app.listen(AppModule.port);
 }
 
 bootstrap();

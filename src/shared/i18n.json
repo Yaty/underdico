@@ -1,0 +1,8 @@
+{
+  "en": {
+    "errors": {
+      "LOGIN_FAILED": "Login failed",
+      "USER_NOT_FOUND": "User not found"
+    }
+  }
+}

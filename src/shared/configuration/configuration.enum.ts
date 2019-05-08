@@ -1,0 +1,9 @@
+export enum Configuration {
+  HOST = 'HOST',
+  PORT = 'PORT',
+  MONGO_URI = 'MONGO_URI',
+  JWT_SECRET = 'JWT_SECRET',
+  JWT_ALGORITHM = 'JWT_ALGORITHM',
+  JWT_EXPIRATION = 'JWT_EXPIRATION',
+  JWT_ISSUER = 'JWT_ISSUER',
+}
