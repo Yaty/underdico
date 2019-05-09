@@ -1,4 +1,3 @@
-import { Schema } from 'mongoose';
 import { BaseModelDto } from '../../shared/base.model';
 import { ApiModelProperty } from '@nestjs/swagger';
 
@@ -10,7 +9,7 @@ export class WordDto extends BaseModelDto {
   readonly definition: string;
 
   @ApiModelProperty()
-  readonly userId: Schema.Types.ObjectId;
+  readonly userId: string;
 
   @ApiModelProperty()
   readonly tags: string[];

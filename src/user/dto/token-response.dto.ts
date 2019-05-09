@@ -1,6 +1,6 @@
 import { ApiModelProperty } from '@nestjs/swagger';
 
-export class LoginResponseDto {
+export class TokenResponseDto {
   @ApiModelProperty() token: string;
   @ApiModelProperty() userId: string;
   @ApiModelProperty() expiresIn: number;

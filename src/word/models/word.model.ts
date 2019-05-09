@@ -1,12 +1,12 @@
 import { InstanceType, ModelType, prop } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 
 class Vote extends BaseModel<Vote> {
   @prop({
     required: [true, 'userId is required'],
   })
-  userId: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
 
   @prop()
   value: boolean;
@@ -39,7 +39,7 @@ export class Word extends BaseModel<Word> {
   @prop({
     required: [true, 'userId is required'],
   })
-  userId: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
 
   @prop({
     required: [true, 'tags is required'],

@@ -1,8 +1,21 @@
-import { Request, Response, Body, Controller, Get, Post, Query, UseGuards, UsePipes, BadRequestException } from '@nestjs/common';
+import {
+  Request,
+  Response,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  UsePipes,
+  BadRequestException,
+  HttpStatus,
+  HttpException,
+} from '@nestjs/common';
 import { WordService } from './word.service';
 import { WordDto } from './dto/word.dto';
 import { Word } from './models/word.model';
-import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiOperation, ApiUseTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiImplicitQuery, ApiOperation, ApiResponse, ApiUseTags } from '@nestjs/swagger';
 import { UserRole } from '../user/models/user-role.enum';
 import { Roles } from '../shared/decorators/roles.decorator';
 import { AuthGuard } from '@nestjs/passport';
@@ -11,6 +24,9 @@ import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { JoiValidationPipe } from '../shared/pipes/joi.pipe';
 import { createValidationSchema } from './validators/createValidationSchema';
+import { CreateWordDto } from './dto/create-word.dto';
+import { CurrentUser } from '../shared/decorators/current-user.decorator';
+import { User } from '../user/models/user.model';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -25,18 +41,33 @@ export class WordController {
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'Create'))
   @UsePipes(new JoiValidationPipe(createValidationSchema))
-  async create(@Request() req, @Response() res, @Body() dto: WordDto): Promise<WordDto> {
-    // TODO : Add middleware to get user ID from JWT to put in word
-    const word = await this.wordService.createWord(dto);
-    res.headers.set('Location', `${req.protocol}://${req.get('host')}:${req.get('port')}/api/words/${word.id}`);
-    return this.wordService.map<WordDto>(word);
+  async create(
+    @Request() req,
+    @Response() res,
+    @Body() dto: CreateWordDto,
+    @CurrentUser() owner: User,
+  ): Promise<WordDto> {
+    try {
+      const word = await this.wordService.createWord(dto, owner);
+      res.set('Location', `${req.protocol}://${req.get('host')}:${req.get('port')}/api/words/${word.id}`);
+      return this.wordService.map<WordDto>(word);
+    } catch (e) {
+      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Get()
   @ApiBadRequestResponse({ type: ApiException })
-  @ApiOperation(GetOperationId(Word.modelName, 'Find all'))
-  async findAll(@Response() res, @Query() query): Promise<WordDto[]> {
-    const range = query.range;
+  @ApiResponse({ status: HttpStatus.OK, type: WordDto, isArray: true })
+  @ApiOperation(GetOperationId(Word.modelName, 'FindAll'))
+  @ApiImplicitQuery({ name: 'range', required: true, description: '0-50, limit is 50 by page' })
+  async findAll(
+    @Response() res,
+    @Query('range') range,
+    @CurrentUser({
+      required: false,
+    }) user?: User,
+  ): Promise<WordDto[]> {
     const limit = 50;
 
     let skip = 0;
@@ -64,14 +95,18 @@ export class WordController {
       }
     }
 
-    const {
-      words,
-      count,
-    } = await this.wordService.getAggregatedWords(skip, take);
+    try {
+      const {
+        words,
+        count,
+      } = await this.wordService.getAggregatedWords(skip, take, user);
 
-    res.headers.set('Content-Range', `${skip + 1}-${skip + take}/${count}`);
-    res.headers.set('Accept-Range', `${Word.modelName} ${limit}`);
+      res.set('Content-Range', `${skip + 1}-${skip + take}/${count}`);
+      res.set('Accept-Range', `${Word.modelName} ${limit}`);
 
-    return words;
+      return words;
+    } catch (e) {
+      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

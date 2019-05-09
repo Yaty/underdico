@@ -6,8 +6,8 @@ import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 import { BaseService } from '../shared/base.service';
 import { MapperService } from '../shared/mapper/mapper.service';
 import { User } from './models/user.model';
-import { LoginResponseDto } from './dto/login-response.dto';
-import { LoginDto } from './dto/login.dto';
+import { TokenResponseDto } from './dto/token-response.dto';
+import { TokenDto } from './dto/token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { randomBytes, scrypt } from 'crypto';
 
@@ -51,7 +51,7 @@ export class UserService extends BaseService<User> {
     return new Promise((resolve, reject) => {
       const [scryptLen, salt, expectedDerivedKey] = saltedPasswordHash.split(this.SCRYPT_MEMBERS_SEPARATOR);
 
-      scrypt(candidatePassword, salt, Number(scryptLen), (err, derivedKey) => {
+      scrypt(candidatePassword, Buffer.from(salt, this.SCRYPT_MEMBERS_ENCODING), Number(scryptLen), (err, derivedKey) => {
         if (err) {
           return reject(err);
         }
@@ -62,11 +62,12 @@ export class UserService extends BaseService<User> {
   }
 
   async register(dto: RegisterDto) {
-    const { username, password } = dto;
+    const { username, email, password } = dto;
 
     const newUser = User.createModel();
     newUser.username = username.trim().toLowerCase();
     newUser.password = await this.hashPassword(password);
+    newUser.email = email.trim();
 
     try {
       const result = await this.create(newUser);
@@ -76,7 +77,7 @@ export class UserService extends BaseService<User> {
     }
   }
 
-  async login(dto: LoginDto): Promise<LoginResponseDto> {
+  async login(dto: TokenDto): Promise<TokenResponseDto> {
     const { username, password } = dto;
 
     const user = await this.findOne({
@@ -84,7 +85,7 @@ export class UserService extends BaseService<User> {
     });
 
     if (!user) {
-      throw new HttpException('Invalid credentials', HttpStatus.NOT_FOUND);
+      throw new HttpException('Invalid credentials', HttpStatus.BAD_REQUEST);
     }
 
     const isMatch = await this.checkPassword(user.password, password);
@@ -97,7 +98,7 @@ export class UserService extends BaseService<User> {
       username: user.username,
       email: user.email,
       role: user.role,
-      id: user._id,
+      id: BaseService.objectIdToString(user._id),
     };
 
     const {

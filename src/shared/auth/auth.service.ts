@@ -1,5 +1,6 @@
 import * as uuid from 'uuid/v4';
 import * as jwt from 'jsonwebtoken';
+import * as ms from 'ms';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { UserService } from '../../user/user.service';
 import { JwtPayload } from './jwt-payload.interface';
@@ -20,7 +21,7 @@ export class AuthService {
   ) {
     this.jwtOptions = {
       algorithm: configurationService.get(Configuration.JWT_ALGORITHM),
-      expiresIn: configurationService.get(Configuration.JWT_EXPIRATION),
+      expiresIn: ms(configurationService.get(Configuration.JWT_EXPIRATION)) / 1000,
       issuer: configurationService.get(Configuration.JWT_ISSUER),
     };
 
@@ -37,7 +38,7 @@ export class AuthService {
     return {
       token,
       createdAt: new Date(),
-      expiresIn: Number(this.jwtOptions.expiresIn),
+      expiresIn: this.jwtOptions.expiresIn as number,
     };
   }
 

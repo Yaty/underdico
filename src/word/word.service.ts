@@ -5,6 +5,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
 import { BaseService } from '../shared/base.service';
 import { MapperService } from '../shared/mapper/mapper.service';
+import { CreateWordDto } from './dto/create-word.dto';
+import { User } from '../user/models/user.model';
 
 @Injectable()
 export class WordService extends BaseService<Word>  {
@@ -17,13 +19,15 @@ export class WordService extends BaseService<Word>  {
     this.mapper = mapperService.mapper;
   }
 
-  async createWord(word: WordDto): Promise<Word> {
+  async createWord(word: CreateWordDto, owner: User): Promise<Word> {
     const newWord = Word.createModel();
+
+    console.log(owner);
 
     newWord.name = word.name;
     newWord.definition = word.definition;
     newWord.tags = word.tags;
-    newWord.userId = word.userId;
+    newWord.userId = BaseService.toObjectId(owner.id);
     newWord.votes = [];
 
     try {
@@ -34,7 +38,7 @@ export class WordService extends BaseService<Word>  {
     }
   }
 
-  async getAggregatedWords(skip: number, take: number, authenticatedUserId?: string): Promise<{
+  async getAggregatedWords(skip: number, take: number, user?: User): Promise<{
     words: WordDto[],
     count: number,
   }> {
@@ -56,12 +60,12 @@ export class WordService extends BaseService<Word>  {
         score: {
           $cond : ['$votes.value', 1, 0],
         },
-        userUpVoted: authenticatedUserId ? {
-          $in: [authenticatedUserId, '$votes.userId'],
+        userUpVoted: user.id ? {
+          $in: [user.id, '$votes.userId'],
         } : {
           $toBool: false,
         },
-        userDownVoted: authenticatedUserId ? {
+        userDownVoted: user.id ? {
           $ne: '$userUpVoted',
         } : {
           $toBool: false,
@@ -78,7 +82,7 @@ export class WordService extends BaseService<Word>  {
     ]);
 
     return {
-      words: words.map((w) => this.map<WordDto>(w)),
+      words: await this.map<WordDto[]>(words),
       count,
     };
   }

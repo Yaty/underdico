@@ -10,14 +10,14 @@ export abstract class BaseService<T extends Typegoose> {
     return this.model.modelName;
   }
 
-  private get viewModelName(): string {
-    return `${this.model.modelName}Vm`;
+  private get dtoName(): string {
+    return `${this.model.modelName}Dto`;
   }
 
   async map<K>(
     object: Partial<InstanceType<T>> | Array<Partial<InstanceType<T>>>,
     sourceKey: string = this.modelName,
-    destinationKey: string = this.viewModelName,
+    destinationKey: string = this.dtoName,
   ): Promise<K> {
     return this.mapper.map(sourceKey, destinationKey, object);
   }
@@ -52,7 +52,11 @@ export abstract class BaseService<T extends Typegoose> {
     await this.model.deleteMany(filter).exec();
   }
 
-  private static toObjectId(id: string): Types.ObjectId {
+  public static toObjectId(id: string): Types.ObjectId {
     return Types.ObjectId(id);
+  }
+
+  public static objectIdToString(objectId: Types.ObjectId) {
+    return objectId.toString();
   }
 }

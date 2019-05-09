@@ -3,8 +3,8 @@ import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiUseTags } f
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { User } from './models/user.model';
-import { LoginResponseDto } from './dto/login-response.dto';
-import { LoginDto } from './dto/login.dto';
+import { TokenResponseDto } from './dto/token-response.dto';
+import { TokenDto } from './dto/token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserDto } from './dto/user.dto';
 import { UserService } from './user.service';
@@ -17,7 +17,7 @@ import { registerValidationSchema } from './validators/register.validation';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post('register')
+  @Post()
   @ApiCreatedResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Register'))
@@ -34,19 +34,19 @@ export class UserController {
     }
 
     if (exist) {
-      throw new HttpException(`${dto.username} exists`, HttpStatus.BAD_REQUEST);
+      throw new HttpException(`${dto.username} already exists`, HttpStatus.CONFLICT);
     }
 
     const newUser = await this.userService.register(dto);
     return this.userService.map<UserDto>(newUser);
   }
 
-  @Post('login')
-  @ApiCreatedResponse({ type: LoginResponseDto })
+  @Post('token')
+  @ApiCreatedResponse({ type: TokenResponseDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Login'))
   @UsePipes(new JoiValidationPipe(loginValidationSchema))
-  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
+  async login(@Body() dto: TokenDto): Promise<TokenResponseDto> {
     return this.userService.login(dto);
   }
 }
