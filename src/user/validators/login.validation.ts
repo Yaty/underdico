@@ -1,6 +1,6 @@
-import { object, string, ObjectSchema } from 'joi';
+import * as Joi from 'joi';
 
-export const loginValidationSchema: ObjectSchema = object({
-  username: string().alphanum().min(3).max(36).required(),
-  password: string().alphanum().min(6).max(36).required(),
+export const loginValidationSchema = Joi.object().keys({
+  username: Joi.string().min(3).max(36).required(),
+  password: Joi.string().min(6).max(36).required(),
 });

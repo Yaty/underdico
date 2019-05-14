@@ -1,9 +1,9 @@
-import { ObjectSchema, string } from 'joi';
+import * as Joi from 'joi';
 
 import {
   loginValidationSchema,
 } from './login.validation';
 
-export const registerValidationSchema: ObjectSchema = loginValidationSchema.keys({
-  email: string().email().required(),
+export const registerValidationSchema = loginValidationSchema.keys({
+  email: Joi.string().email().required(),
 });

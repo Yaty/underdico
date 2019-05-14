@@ -14,13 +14,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
+    if (error.getStatus() === HttpStatus.UNPROCESSABLE_ENTITY) {
+      error.response.errors = error.response.error;
+      delete error.response.error;
+    }
+
     res.status(error.getStatus()).json({
       statusCode: error.getStatus(),
-      error: error.response.name || error.response.error || error.name,
-      message: error.response.message || error.response || error.message,
-      errors: error.response.errors || null,
+      name: error.response.name || error.constructor.name,
+      error: error.response.error,
+      message: error.response.message || error.message,
+      errors: error.response.errors,
       timestamp: new Date().toISOString(),
-      path: req ? req.url : null,
+      path: req.url,
     });
   }
 }

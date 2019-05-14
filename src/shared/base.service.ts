@@ -1,10 +1,11 @@
-import 'automapper-ts/dist/automapper';
 import { Types } from 'mongoose';
-import { InstanceType, ModelType, Typegoose } from 'typegoose';
+import { InstanceType, ModelType } from 'typegoose';
+import { BaseMapper } from './base.mapper';
+import { BaseModel, BaseModelDto } from './base.model';
 
-export abstract class BaseService<T extends Typegoose> {
-  protected model: ModelType<T>;
-  protected mapper: AutoMapperJs.AutoMapper;
+export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> {
+  public model: ModelType<T>;
+  public mapper: BaseMapper<K, T>;
 
   private get modelName(): string {
     return this.model.modelName;
@@ -12,14 +13,6 @@ export abstract class BaseService<T extends Typegoose> {
 
   private get dtoName(): string {
     return `${this.model.modelName}Dto`;
-  }
-
-  async map<K>(
-    object: Partial<InstanceType<T>> | Array<Partial<InstanceType<T>>>,
-    sourceKey: string = this.modelName,
-    destinationKey: string = this.dtoName,
-  ): Promise<K> {
-    return this.mapper.map(sourceKey, destinationKey, object);
   }
 
   findAll(filter = {}): Promise<Array<InstanceType<T>>> {

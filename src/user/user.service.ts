@@ -4,23 +4,24 @@ import { ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
 import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 import { BaseService } from '../shared/base.service';
-import { MapperService } from '../shared/mapper/mapper.service';
 import { User } from './models/user.model';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { TokenDto } from './dto/token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { randomBytes, scrypt } from 'crypto';
+import { UserMapper } from './user.mapper';
+import { UserDto } from './dto/user.dto';
 
 @Injectable()
-export class UserService extends BaseService<User> {
+export class UserService extends BaseService<User, UserDto> {
   constructor(
     @InjectModel(User.modelName) private readonly userModel: ModelType<User>,
-    private readonly mapperService: MapperService,
+    mapper: UserMapper,
     @Inject(forwardRef(() => AuthService)) readonly authService: AuthService,
   ) {
     super();
     this.model = userModel;
-    this.mapper = mapperService.mapper;
+    this.mapper = mapper;
   }
 
   private readonly SCRYPT_MEMBERS_SEPARATOR = '$';
@@ -69,12 +70,8 @@ export class UserService extends BaseService<User> {
     newUser.password = await this.hashPassword(password);
     newUser.email = email.trim();
 
-    try {
-      const result = await this.create(newUser);
-      return result.toJSON() as User;
-    } catch (e) {
-      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    const result = await this.create(newUser);
+    return result.toJSON() as User;
   }
 
   async login(dto: TokenDto): Promise<TokenResponseDto> {

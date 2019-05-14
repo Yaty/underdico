@@ -10,7 +10,7 @@ import {
   UsePipes,
   BadRequestException,
   HttpStatus,
-  HttpException,
+  Param,
 } from '@nestjs/common';
 import { WordService } from './word.service';
 import { WordDto } from './dto/word.dto';
@@ -23,10 +23,9 @@ import { RolesGuard } from '../shared/guards/roles.guard';
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { JoiValidationPipe } from '../shared/pipes/joi.pipe';
-import { createValidationSchema } from './validators/createValidationSchema';
+import { createValidation } from './validators/create.validation';
 import { CreateWordDto } from './dto/create-word.dto';
-import { CurrentUser } from '../shared/decorators/current-user.decorator';
-import { User } from '../user/models/user.model';
+import { findBydIdValidation } from './validators/findBydId.validation';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -40,20 +39,15 @@ export class WordController {
   @ApiCreatedResponse({ type: WordDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'Create'))
-  @UsePipes(new JoiValidationPipe(createValidationSchema))
+  @UsePipes(new JoiValidationPipe(createValidation))
   async create(
     @Request() req,
     @Response() res,
     @Body() dto: CreateWordDto,
-    @CurrentUser() owner: User,
-  ): Promise<WordDto> {
-    try {
-      const word = await this.wordService.createWord(dto, owner);
-      res.set('Location', `${req.protocol}://${req.get('host')}:${req.get('port')}/api/words/${word.id}`);
-      return this.wordService.map<WordDto>(word);
-    } catch (e) {
-      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  ): Promise<void> {
+    const word = await this.wordService.createWord(dto, req.user);
+    res.set('Location', `${req.protocol}://${req.get('host')}/api/words/${word.id}`);
+    res.status(201).json(await this.wordService.mapper.map(word));
   }
 
   @Get()
@@ -62,12 +56,10 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'FindAll'))
   @ApiImplicitQuery({ name: 'range', required: true, description: '0-50, limit is 50 by page' })
   async findAll(
+    @Request() req,
     @Response() res,
     @Query('range') range,
-    @CurrentUser({
-      required: false,
-    }) user?: User,
-  ): Promise<WordDto[]> {
+  ): Promise<void> {
     const limit = 50;
 
     let skip = 0;
@@ -95,18 +87,29 @@ export class WordController {
       }
     }
 
-    try {
-      const {
-        words,
-        count,
-      } = await this.wordService.getAggregatedWords(skip, take, user);
+    const {
+      words,
+      count,
+    } = await this.wordService.getAggregatedWords(skip, take);
 
-      res.set('Content-Range', `${skip + 1}-${skip + take}/${count}`);
-      res.set('Accept-Range', `${Word.modelName} ${limit}`);
+    res.set('Content-Range', `${skip}-${skip + words.length}/${count}`);
+    res.set('Accept-Range', `${Word.modelName} ${limit}`);
+    res.status(200).json(
+      this.wordService.mapper.mapArray(words, req.user && req.user.id),
+    );
+  }
 
-      return words;
-    } catch (e) {
-      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  @Get(':id')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiResponse({ status: HttpStatus.OK, type: WordDto })
+  @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
+  @UsePipes(new JoiValidationPipe(findBydIdValidation))
+  async findById(
+    @Param('id') id,
+    @Request() req,
+  ): Promise<WordDto> {
+    const word = await this.wordService.findWordById(id);
+    return this.wordService.mapper.map(word, req.user && req.user.id);
   }
 }

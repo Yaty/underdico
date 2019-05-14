@@ -23,22 +23,25 @@ export class UserController {
   @ApiOperation(GetOperationId(User.modelName, 'Register'))
   @UsePipes(new JoiValidationPipe(registerValidationSchema))
   async register(@Body() dto: RegisterDto): Promise<UserDto> {
-    let exist;
-
-    try {
-      exist = await this.userService.findOne({
+    const [usernameExists, emailExists] = await Promise.all([
+      this.userService.findOne({
         username: dto.username,
-      });
-    } catch (e) {
-      throw new HttpException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+      }),
+      this.userService.findOne({
+        email: dto.email,
+      }),
+    ]);
+
+    if (usernameExists) {
+      throw new HttpException(`Username already exists`, HttpStatus.CONFLICT);
     }
 
-    if (exist) {
-      throw new HttpException(`${dto.username} already exists`, HttpStatus.CONFLICT);
+    if (emailExists) {
+      throw new HttpException(`Email already exists`, HttpStatus.CONFLICT);
     }
 
     const newUser = await this.userService.register(dto);
-    return this.userService.map<UserDto>(newUser);
+    return this.userService.mapper.map(newUser);
   }
 
   @Post('token')
