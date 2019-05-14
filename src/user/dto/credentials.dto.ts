@@ -1,6 +1,6 @@
 import { ApiModelProperty } from '@nestjs/swagger';
 
-export class TokenDto {
+export class CredentialsDto {
   @ApiModelProperty({
     required: true,
     minLength: 6,

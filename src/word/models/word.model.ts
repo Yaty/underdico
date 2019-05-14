@@ -2,7 +2,7 @@ import { InstanceType, ModelType, prop } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { Types } from 'mongoose';
 
-class Vote extends BaseModel<Vote> {
+export class Vote extends BaseModel<Vote> {
   @prop({
     required: [true, 'userId is required'],
   })

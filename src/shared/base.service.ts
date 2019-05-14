@@ -4,8 +4,10 @@ import { BaseMapper } from './base.mapper';
 import { BaseModel, BaseModelDto } from './base.model';
 
 export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> {
-  public model: ModelType<T>;
-  public mapper: BaseMapper<K, T>;
+  protected constructor(
+    public model: ModelType<T>,
+    public mapper: BaseMapper<K, T>,
+  ) {}
 
   private get modelName(): string {
     return this.model.modelName;
@@ -39,6 +41,10 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
     return this.model.findByIdAndUpdate(BaseService.toObjectId(id), item, {
       new: true,
     }).exec();
+  }
+
+  count(filter = {}): Promise<number> {
+    return this.model.countDocuments(filter).exec();
   }
 
   async clearCollection(filter = {}): Promise<void> {

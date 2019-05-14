@@ -3,7 +3,8 @@ import { WordController } from './word.controller';
 import { WordService } from './word.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Word } from './models/word.model';
-import { WordMapper } from './word.mapper';
+import { WordMapper } from './mappers/word.mapper';
+import { VoteMapper } from './mappers/vote.mapper';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { WordMapper } from './word.mapper';
     }]),
   ],
   controllers: [WordController],
-  providers: [WordService, WordMapper],
+  providers: [WordService, WordMapper, VoteMapper],
 })
 export class WordModule {}

@@ -4,7 +4,7 @@ import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { User } from './models/user.model';
 import { TokenResponseDto } from './dto/token-response.dto';
-import { TokenDto } from './dto/token.dto';
+import { CredentialsDto } from './dto/credentials.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserDto } from './dto/user.dto';
 import { UserService } from './user.service';
@@ -49,7 +49,7 @@ export class UserController {
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Login'))
   @UsePipes(new JoiValidationPipe(loginValidationSchema))
-  async login(@Body() dto: TokenDto): Promise<TokenResponseDto> {
+  async login(@Body() dto: CredentialsDto): Promise<TokenResponseDto> {
     return this.userService.login(dto);
   }
 }

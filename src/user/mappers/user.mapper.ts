@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { UserDto } from './dto/user.dto';
-import { User } from './models/user.model';
-import { BaseMapper } from '../shared/base.mapper';
+import { UserDto } from '../dto/user.dto';
+import { User } from '../models/user.model';
+import { BaseMapper } from '../../shared/base.mapper';
 import { morphism } from 'morphism';
 
 @Injectable()

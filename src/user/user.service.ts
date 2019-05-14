@@ -6,10 +6,10 @@ import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 import { BaseService } from '../shared/base.service';
 import { User } from './models/user.model';
 import { TokenResponseDto } from './dto/token-response.dto';
-import { TokenDto } from './dto/token.dto';
+import { CredentialsDto } from './dto/credentials.dto';
 import { RegisterDto } from './dto/register.dto';
 import { randomBytes, scrypt } from 'crypto';
-import { UserMapper } from './user.mapper';
+import { UserMapper } from './mappers/user.mapper';
 import { UserDto } from './dto/user.dto';
 
 @Injectable()
@@ -19,9 +19,7 @@ export class UserService extends BaseService<User, UserDto> {
     mapper: UserMapper,
     @Inject(forwardRef(() => AuthService)) readonly authService: AuthService,
   ) {
-    super();
-    this.model = userModel;
-    this.mapper = mapper;
+    super(userModel, mapper);
   }
 
   private readonly SCRYPT_MEMBERS_SEPARATOR = '$';
@@ -74,7 +72,7 @@ export class UserService extends BaseService<User, UserDto> {
     return result.toJSON() as User;
   }
 
-  async login(dto: TokenDto): Promise<TokenResponseDto> {
+  async login(dto: CredentialsDto): Promise<TokenResponseDto> {
     const { username, password } = dto;
 
     const user = await this.findOne({

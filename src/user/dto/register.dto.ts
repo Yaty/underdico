@@ -1,7 +1,7 @@
 import { ApiModelProperty } from '@nestjs/swagger';
-import { TokenDto } from './token.dto';
+import { CredentialsDto } from './credentials.dto';
 
-export class RegisterDto extends TokenDto {
+export class RegisterDto extends CredentialsDto {
   @ApiModelProperty({
     required: true,
     format: 'email',

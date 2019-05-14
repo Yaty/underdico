@@ -1,10 +1,16 @@
-import * as request from 'supertest';
+import * as supertest from 'supertest';
+import * as uuid from 'uuid/v4';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import { INestApplication } from '@nestjs/common';
+import { RegisterDto } from '../src/user/dto/register.dto';
+import { TokenResponseDto } from '../src/user/dto/token-response.dto';
+import { CreateWordDto } from '../src/word/dto/create-word.dto';
+import { WordDto } from '../src/word/dto/word.dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
+  let api;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -13,12 +19,203 @@ describe('AppController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    api = supertest(app.getHttpServer());
   });
 
+  afterAll(async () => {
+    await app.close();
+  });
+
+  function createUser(): Promise<RegisterDto> {
+    return new Promise((resolve, reject) => {
+      const user: RegisterDto = {
+        username: uuid(),
+        password: uuid(),
+        email: `${uuid()}@${uuid()}.fr`,
+      };
+
+      return api.post('/users')
+        .send(user)
+        .expect(201)
+        .then(() => {
+          resolve(user);
+        })
+        .catch(reject);
+    });
+  }
+
+  function login(user: RegisterDto): Promise<TokenResponseDto> {
+    return new Promise((resolve, reject) => {
+      api.post('/users/token')
+        .send({
+          username: user.username,
+          password: user.password,
+        })
+        .expect(201)
+        .then((res) => {
+          resolve(res.body);
+        })
+        .catch(reject);
+    });
+  }
+
+  function createWord(token: string): Promise<WordDto> {
+    return new Promise((resolve, reject) => {
+      const word: CreateWordDto = {
+        name: uuid().substr(0, 6),
+        definition: uuid(),
+        tags: [uuid()],
+      };
+
+      api.post('/words')
+        .set('Authorization', 'Bearer ' + token)
+        .send(word)
+        .expect(201)
+        .then((res) => {
+          resolve(res.body);
+        })
+        .catch(reject);
+    });
+  }
+
   it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
+    return api.get('/')
       .expect(200)
-      .expect('Hello World!');
+      .then((res) => {
+        expect(res.body).toHaveProperty('startedAt');
+        expect(res.body).toHaveProperty('uptime');
+      });
+  });
+
+  it('/users (POST)', () => {
+    const user: RegisterDto = {
+      username: uuid(),
+      password: uuid(),
+      email: `${uuid()}@${uuid()}.fr`,
+    };
+
+    return api.post('/users')
+      .send(user)
+      .expect(201)
+      .then((res) => {
+        expect(res.body.username).toEqual(user.username);
+        expect(res.body.email).toEqual(user.email);
+        expect(res.body.role).toEqual('User');
+        expect(res.body.password).toBeUndefined();
+        expect(res.body).toHaveProperty('id');
+        expect(res.body).toHaveProperty('createdAt');
+        expect(res.body).toHaveProperty('updatedAt');
+      });
+  });
+
+  it('/users/token (POST)', async () => {
+    const user = await createUser();
+
+    await api.post('/users/token')
+      .send({
+        username: user.username,
+        password: user.password,
+      })
+      .expect(201)
+      .then((res) => {
+        expect(res.body).toHaveProperty('token');
+        expect(res.body).toHaveProperty('userId');
+        expect(res.body).toHaveProperty('expiresIn');
+        expect(res.body).toHaveProperty('createdAt');
+      });
+  });
+
+  function checkWord(word, userId?: string) {
+    expect(word).toHaveProperty('createdAt');
+    expect(word).toHaveProperty('updatedAt');
+    expect(word).toHaveProperty('id');
+    expect(word.name).toEqual(word.name);
+    expect(word.definition).toEqual(word.definition);
+    expect(word.tags[0]).toEqual(word.tags[0]);
+
+    if (userId) {
+      expect(word.userId).toEqual(userId);
+    }
+
+    expect(word.score).toEqual(0);
+    expect(word.userUpVoted).toEqual(false);
+    expect(word.userDownVoted).toEqual(false);
+    expect(word.userVoteId).toBeUndefined();
+  }
+
+  it('/words (POST)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    const word: CreateWordDto = {
+      name: uuid().substr(0, 6),
+      definition: uuid(),
+      tags: [uuid()],
+    };
+
+    await api.post('/words')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send(word)
+      .expect(201)
+      .then((res) => {
+        checkWord(res.body, auth.userId);
+      });
+  });
+
+  it('/words (GET)', () => {
+    return api.get('/words')
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+
+        for (const w of res.body) {
+          checkWord(w);
+        }
+      });
+  });
+
+  it('/words/{wordId} (GET)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+
+    await api.get('/words/' + word.id)
+      .expect(200)
+      .then((res) => {
+        checkWord(res.body);
+        expect(res.body.id).toEqual(word.id);
+      });
+  });
+
+  it('/words/random (GET)', async () => {
+    await api.get('/words/random')
+      .expect(302)
+      .then((res) => {
+        expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
+      });
+  });
+
+  it('/words/{wordId}/votes (POST)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+
+    await api.post('/words/' + word.id + '/votes')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send({
+        value: true,
+      })
+      .expect(201)
+      .then((res) => {
+        expect(res.body).toHaveProperty('createdAt');
+        expect(res.body).toHaveProperty('updatedAt');
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.value).toBeTruthy();
+        expect(res.body.userId).toEqual(auth.userId);
+      });
+  });
+
+  it('/words/{wordId}/votes (PATCH)', () => {
+    // TODO
   });
 });
