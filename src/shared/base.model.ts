@@ -1,6 +1,6 @@
 import { ApiModelPropertyOptional } from '@nestjs/swagger';
 import { SchemaOptions } from 'mongoose';
-import { Typegoose, prop, pre } from 'typegoose';
+import { Typegoose, prop } from 'typegoose';
 
 export class BaseModelDto {
   @ApiModelPropertyOptional({ type: String, format: 'date-time' })
@@ -12,11 +12,7 @@ export class BaseModelDto {
   @ApiModelPropertyOptional() id?: string;
 }
 
-// @ts-ignore
 // tslint:disable-next-line:max-classes-per-file
-@pre<T>('findOneAndUpdate', function() {
-  this._update.updatedAt = new Date(Date.now());
-})
 export abstract class BaseModel<T> extends Typegoose {
   @prop()
   @ApiModelPropertyOptional({ type: String, format: 'date-time' })

@@ -7,6 +7,7 @@ import { RegisterDto } from '../src/user/dto/register.dto';
 import { TokenResponseDto } from '../src/user/dto/token-response.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { WordDto } from '../src/word/dto/word.dto';
+import { VoteDto } from '../src/word/dto/vote.dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -70,6 +71,21 @@ describe('AppController (e2e)', () => {
       api.post('/words')
         .set('Authorization', 'Bearer ' + token)
         .send(word)
+        .expect(201)
+        .then((res) => {
+          resolve(res.body);
+        })
+        .catch(reject);
+    });
+  }
+
+  function voteForAWord(token: string, wordId: string, voteValue: boolean): Promise<VoteDto> {
+    return new Promise((resolve, reject) => {
+       api.post('/words/' + wordId + '/votes')
+        .set('Authorization', 'Bearer ' + token)
+        .send({
+          value: voteValue,
+        })
         .expect(201)
         .then((res) => {
           resolve(res.body);
@@ -207,15 +223,28 @@ describe('AppController (e2e)', () => {
       })
       .expect(201)
       .then((res) => {
-        expect(res.body).toHaveProperty('createdAt');
-        expect(res.body).toHaveProperty('updatedAt');
         expect(res.body).toHaveProperty('id');
         expect(res.body.value).toBeTruthy();
         expect(res.body.userId).toEqual(auth.userId);
       });
   });
 
-  it('/words/{wordId}/votes (PATCH)', () => {
-    // TODO
+  it('/words/{wordId}/votes/{voteId} (PATCH)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    const vote = await voteForAWord(auth.token, word.id, true);
+
+    await api.patch('/words/' + word.id + '/votes/' + vote.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send({
+        value: false,
+      })
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.value).toBeFalsy();
+        expect(res.body.userId).toEqual(auth.userId);
+      });
   });
 });

@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Word, Vote } from './models/word.model';
+import { Word } from './models/word.model';
 import { WordDto } from './dto/word.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
@@ -8,6 +8,7 @@ import { CreateWordDto } from './dto/create-word.dto';
 import { User } from '../user/models/user.model';
 import { WordMapper } from './mappers/word.mapper';
 import { VoteMapper } from './mappers/vote.mapper';
+import { Vote } from './models/vote.model';
 
 @Injectable()
 export class WordService extends BaseService<Word, WordDto>  {
@@ -111,7 +112,7 @@ export class WordService extends BaseService<Word, WordDto>  {
       throw new NotFoundException('Word not found');
     }
 
-    const userAlreadyVoted = this.userAlreadyVoted(wordId, user);
+    const userAlreadyVoted = await this.userAlreadyVoted(wordId, user);
 
     if (userAlreadyVoted) {
       throw new ConflictException('This user already voted for this word');

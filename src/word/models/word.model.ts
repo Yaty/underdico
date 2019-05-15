@@ -1,30 +1,8 @@
 import { InstanceType, ModelType, prop } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { Types } from 'mongoose';
+import { Vote } from './vote.model';
 
-export class Vote extends BaseModel<Vote> {
-  @prop({
-    required: [true, 'userId is required'],
-  })
-  userId: Types.ObjectId;
-
-  @prop()
-  value: boolean;
-
-  static get model(): ModelType<Vote> {
-    return new Vote().getModelForClass(Vote, { schemaOptions });
-  }
-
-  static get modelName(): string {
-    return this.model.modelName;
-  }
-
-  static createModel(): InstanceType<Vote> {
-    return new this.model();
-  }
-}
-
-// tslint:disable-next-line:max-classes-per-file
 export class Word extends BaseModel<Word> {
   @prop({
     required: [true, 'name is required'],

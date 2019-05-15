@@ -7,7 +7,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
   BadRequestException,
   HttpStatus,
   Param,
@@ -31,12 +30,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../shared/guards/roles.guard';
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
-import { JoiValidationPipe } from '../shared/pipes/joi.pipe';
-import { createValidation } from './validators/create.validation';
 import { CreateWordDto } from './dto/create-word.dto';
-import { findBydIdValidation } from './validators/findBydId.validation';
 import { CreateVoteDto } from './dto/create-vote.dto';
 import { VoteDto } from './dto/vote.dto';
+import { CreateVoteParamsDto } from './dto/create-vote-params.dto';
+import { UpdateVoteParamsDto } from './dto/update-vote-params.dto';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -50,7 +48,6 @@ export class WordController {
   @ApiCreatedResponse({ type: WordDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'Create'))
-  @UsePipes(new JoiValidationPipe(createValidation))
   async create(
     @Request() req,
     @Response() res,
@@ -124,7 +121,6 @@ export class WordController {
   @Get(':wordId')
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
   @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
-  @UsePipes(new JoiValidationPipe(findBydIdValidation))
   async findById(
     @Param('wordId') wordId,
     @Request() req,
@@ -138,13 +134,12 @@ export class WordController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiCreatedResponse({ type: VoteDto })
   @ApiOperation(GetOperationId(Word.modelName, 'CreateVote'))
-  @UsePipes(new JoiValidationPipe(findBydIdValidation))
   async createVote(
-    @Param('wordId') wordId,
+    @Param() params: CreateVoteParamsDto,
     @Body() dto: CreateVoteDto,
     @Request() req,
   ): Promise<VoteDto> {
-    const vote = await this.wordService.createVote(wordId, dto.value, req.user);
+    const vote = await this.wordService.createVote(params.wordId, dto.value, req.user);
     return this.wordService.voteMapper.map(vote);
   }
 
@@ -153,16 +148,12 @@ export class WordController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiOkResponse({ type: VoteDto })
   @ApiOperation(GetOperationId(Word.modelName, 'UpdateVote'))
-  @UsePipes(new JoiValidationPipe(findBydIdValidation))
   async updateVote(
-    @Param('wordId') wordId,
-    @Param('voteId') voteId,
+    @Param() params: UpdateVoteParamsDto,
     @Body() dto: CreateVoteDto,
     @Request() req,
-    @Response() res,
   ): Promise<VoteDto> {
-    const vote = await this.wordService.updateVote(wordId, voteId, dto.value, req.user);
+    const vote = await this.wordService.updateVote(params.wordId, params.voteId, dto.value, req.user);
     return this.wordService.voteMapper.map(vote);
   }
-
 }

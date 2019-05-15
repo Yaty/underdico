@@ -8,9 +8,6 @@ import { CredentialsDto } from './dto/credentials.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserDto } from './dto/user.dto';
 import { UserService } from './user.service';
-import { JoiValidationPipe } from '../shared/pipes/joi.pipe';
-import { loginValidationSchema } from './validators/login.validation';
-import { registerValidationSchema } from './validators/register.validation';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
@@ -21,7 +18,6 @@ export class UserController {
   @ApiCreatedResponse({ type: UserDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Register'))
-  @UsePipes(new JoiValidationPipe(registerValidationSchema))
   async register(@Body() dto: RegisterDto): Promise<UserDto> {
     const [usernameExists, emailExists] = await Promise.all([
       this.userService.findOne({
@@ -48,7 +44,6 @@ export class UserController {
   @ApiCreatedResponse({ type: TokenResponseDto })
   @ApiBadRequestResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Login'))
-  @UsePipes(new JoiValidationPipe(loginValidationSchema))
   async login(@Body() dto: CredentialsDto): Promise<TokenResponseDto> {
     return this.userService.login(dto);
   }
