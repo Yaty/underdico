@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Underdico",
   "license": "MIT",
+  "main": "dist/src/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:dev": "nodemon",
@@ -36,7 +37,6 @@
     "passport-jwt": "^4.0.0",
     "passport-local-mongoose": "^5.0.1",
     "reflect-metadata": "0.1.13",
-    "rimraf": "2.6.3",
     "rxjs": "6.4.0",
     "swagger-ui-express": "^4.0.2",
     "typegoose": "^5.6.0"
@@ -56,6 +56,7 @@
     "mongodb-memory-server": "^5.0.2",
     "nodemon": "1.18.11",
     "prettier": "1.16.4",
+    "rimraf": "^2.6.3",
     "supertest": "4.0.2",
     "ts-jest": "24.0.2",
     "ts-node": "8.0.3",
