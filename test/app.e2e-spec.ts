@@ -145,6 +145,21 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/users/{userId} (PATCH)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    await api.patch('/users/' + auth.userId)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .send({
+        email: 'new@email.fr',
+      })
+      .then((res) => {
+        expect(res.body.email).toEqual('new@email.fr');
+      });
+  });
+
   it('/users/token (POST)', async () => {
     const user = await createUser();
 

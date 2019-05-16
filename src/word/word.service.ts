@@ -20,12 +20,6 @@ export class WordService extends BaseService<Word, WordDto> {
     super(wordModel, mapper);
   }
 
-  private async wordDoNotExists(wordId: string): Promise<boolean> {
-    return (await this.count({
-      _id: wordId,
-    })) === 0;
-  }
-
   async createWord(word: CreateWordDto, owner: User): Promise<Word> {
     const newWord = Word.createModel();
 
@@ -86,7 +80,7 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
-    const wordDoNotExists = await this.wordDoNotExists(wordId);
+    const wordDoNotExists = await this.doNotExists(wordId);
 
     if (wordDoNotExists) {
       throw new NotFoundException('Word not found');
@@ -106,7 +100,7 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async updateVote(wordId: string, voteId: string, voteValue: boolean, user: User): Promise<Vote> {
-    const wordDoNotExists = await this.wordDoNotExists(wordId);
+    const wordDoNotExists = await this.doNotExists(wordId);
 
     if (wordDoNotExists) {
       throw new NotFoundException('Word not found');

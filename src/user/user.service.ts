@@ -1,4 +1,4 @@
-import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, forwardRef, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
@@ -11,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { randomBytes, scrypt } from 'crypto';
 import { UserMapper } from '../shared/mappers/user.mapper';
 import { UserDto } from './dto/user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService extends BaseService<User, UserDto> {
@@ -108,5 +109,27 @@ export class UserService extends BaseService<User, UserDto> {
       createdAt,
       userId: user._id,
     };
+  }
+
+  async updateUser(userId: string, dto: UpdateUserDto, authenticatedUser: User): Promise<User> {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (BaseService.objectIdToString(user._id) !== authenticatedUser.id) {
+      throw new ForbiddenException('You do not own this user');
+    }
+
+    if (dto.password) {
+      dto.password = await this.hashPassword(dto.password);
+    }
+
+    return this.userModel.findOneAndUpdate({
+      _id: userId,
+    }, dto, {
+      new: true,
+    }).lean().exec();
   }
 }

@@ -3,8 +3,10 @@ import { UserRole } from '../models/user-role.enum';
 import { BaseModelDto } from '../../shared/base.model';
 
 export class UserDto extends BaseModelDto {
-  @ApiModelProperty() username: string;
-  @ApiModelProperty() email: string;
+  @ApiModelProperty()
+  readonly username: string;
+  @ApiModelProperty()
+  readonly email: string;
   @ApiModelPropertyOptional({ enum: UserRole })
-  role?: UserRole;
+  readonly role?: UserRole;
 }

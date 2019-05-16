@@ -17,6 +17,12 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
     return `${this.model.modelName}Dto`;
   }
 
+  async doNotExists(id: string): Promise<boolean> {
+    return (await this.count({
+      _id: id,
+    })) === 0;
+  }
+
   findAll(filter = {}): Promise<Array<InstanceType<T>>> {
     return this.model.find(filter).exec();
   }
