@@ -2,7 +2,7 @@ FROM node:10-alpine
 WORKDIR /usr/src/app
 
 # Install app dependencies
-COPY package*.json ts-config.json tsconfig.build.json ./
+COPY package*.json tsconfig*.json ./
 RUN npm install
 
 # Bundle app source
