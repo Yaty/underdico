@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { UserDto } from '../dto/user.dto';
-import { User } from '../models/user.model';
-import { BaseMapper } from '../../shared/base.mapper';
+import { UserDto } from '../../user/dto/user.dto';
+import { User } from '../../user/models/user.model';
+import { BaseMapper } from './base.mapper';
 import { morphism } from 'morphism';
 
 @Injectable()
@@ -19,5 +19,9 @@ export class UserMapper extends BaseMapper<UserDto, User> {
 
   public map(user: User): UserDto {
     return morphism(this.schema, user);
+  }
+
+  public mapArray(users: User[]): UserDto[] {
+    return users.map(this.map);
   }
 }

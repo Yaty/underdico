@@ -1,17 +1,4 @@
-import {
-  Request,
-  Response,
-  Body,
-  Controller,
-  Get,
-  Post,
-  Query,
-  UseGuards,
-  BadRequestException,
-  HttpStatus,
-  Param,
-  Patch,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpStatus, Param, Patch, Post, Query, Request, Response, UseGuards } from '@nestjs/common';
 import { WordService } from './word.service';
 import { WordDto } from './dto/word.dto';
 import { Word } from './models/word.model';
@@ -19,7 +6,8 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
-  ApiImplicitQuery, ApiOkResponse,
+  ApiImplicitQuery,
+  ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiUseTags,
@@ -31,16 +19,23 @@ import { RolesGuard } from '../shared/guards/roles.guard';
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { CreateWordDto } from './dto/create-word.dto';
-import { CreateVoteDto } from './dto/create-vote.dto';
-import { VoteDto } from './dto/vote.dto';
+import { CreateVoteDto } from '../vote/dto/create-vote.dto';
+import { VoteDto } from '../vote/dto/vote.dto';
 import { CreateVoteParamsDto } from './dto/create-vote-params.dto';
 import { UpdateVoteParamsDto } from './dto/update-vote-params.dto';
+import { VoteMapper } from '../shared/mappers/vote.mapper';
+import { ExtractJwt } from 'passport-jwt';
+import { decode } from 'jsonwebtoken';
+import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
 @ApiBearerAuth()
 export class WordController {
-  constructor(private readonly wordService: WordService) {}
+  constructor(
+    private readonly wordService: WordService,
+    private readonly voteMapper: VoteMapper,
+  ) {}
 
   @Post()
   @Roles(UserRole.Admin, UserRole.User)
@@ -55,7 +50,7 @@ export class WordController {
   ): Promise<void> {
     const word = await this.wordService.createWord(dto, req.user);
     res.set('Location', `${req.protocol}://${req.get('host')}/api/words/${word.id}`);
-    res.status(201).json(await this.wordService.mapper.map(word));
+    res.status(201).json(await this.wordService.mapper.map(word, req.user.id));
   }
 
   @Get()
@@ -126,7 +121,17 @@ export class WordController {
     @Request() req,
   ): Promise<WordDto> {
     const word = await this.wordService.findWordById(wordId);
-    return this.wordService.mapper.map(word, req.user && req.user.id);
+
+    // This is a workaround to get the userId
+    // FIXME : https://stackoverflow.com/questions/56173298/optional-authentication-in-nest-js-with-nestjs-passport
+    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    let userId;
+
+    if (token) {
+      userId = (decode(token) as JwtPayload).id;
+    }
+
+    return this.wordService.mapper.map(word, userId);
   }
 
   @Post(':wordId/votes')
@@ -140,7 +145,7 @@ export class WordController {
     @Request() req,
   ): Promise<VoteDto> {
     const vote = await this.wordService.createVote(params.wordId, dto.value, req.user);
-    return this.wordService.voteMapper.map(vote);
+    return this.voteMapper.map(vote);
   }
 
   @Patch(':wordId/votes/:voteId')
@@ -154,6 +159,6 @@ export class WordController {
     @Request() req,
   ): Promise<VoteDto> {
     const vote = await this.wordService.updateVote(params.wordId, params.voteId, dto.value, req.user);
-    return this.wordService.voteMapper.map(vote);
+    return this.voteMapper.map(vote);
   }
 }

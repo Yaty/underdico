@@ -3,8 +3,9 @@ import { WordController } from './word.controller';
 import { WordService } from './word.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Word } from './models/word.model';
-import { WordMapper } from './mappers/word.mapper';
-import { VoteMapper } from './mappers/vote.mapper';
+import { WordMapper } from '../shared/mappers/word.mapper';
+import { VoteModule } from '../vote/vote.module';
+import { VoteMapper } from '../shared/mappers/vote.mapper';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { VoteMapper } from './mappers/vote.mapper';
       name: Word.modelName,
       schema: Word.model.schema,
     }]),
+    VoteModule,
   ],
   controllers: [WordController],
   providers: [WordService, WordMapper, VoteMapper],

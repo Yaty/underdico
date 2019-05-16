@@ -9,7 +9,7 @@ import { TokenResponseDto } from './dto/token-response.dto';
 import { CredentialsDto } from './dto/credentials.dto';
 import { RegisterDto } from './dto/register.dto';
 import { randomBytes, scrypt } from 'crypto';
-import { UserMapper } from './mappers/user.mapper';
+import { UserMapper } from '../shared/mappers/user.mapper';
 import { UserDto } from './dto/user.dto';
 
 @Injectable()
@@ -69,7 +69,7 @@ export class UserService extends BaseService<User, UserDto> {
     newUser.email = email.trim();
 
     const result = await this.create(newUser);
-    return result.toJSON() as User;
+    return result.toJSON();
   }
 
   async login(dto: CredentialsDto): Promise<TokenResponseDto> {

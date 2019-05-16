@@ -7,19 +7,26 @@ import { SharedModule } from './shared/shared.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigurationService } from './shared/configuration/configuration.service';
 import { Configuration } from './shared/configuration/configuration.enum';
+import { VoteModule } from './vote/vote.module';
 
 @Module({
-  imports: [SharedModule, MongooseModule.forRootAsync({
-    imports: [SharedModule],
-    useFactory: (configService: ConfigurationService) => ({
-      uri: configService.get(Configuration.MONGO_URI),
-      retryDelay: 500,
-      retryAttempts: 3,
-      useNewUrlParser: true,
-      useCreateIndex: true,
+  imports: [
+    SharedModule,
+    MongooseModule.forRootAsync({
+      imports: [SharedModule],
+      useFactory: (configService: ConfigurationService) => ({
+        uri: configService.get(Configuration.MONGO_URI),
+        retryDelay: 500,
+        retryAttempts: 3,
+        useNewUrlParser: true,
+        useCreateIndex: true,
+      }),
+      inject: [ConfigurationService],
     }),
-    inject: [ConfigurationService],
-  }), UserModule, WordModule],
+    UserModule,
+    VoteModule,
+    WordModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

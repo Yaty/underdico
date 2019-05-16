@@ -7,7 +7,7 @@ import { RegisterDto } from '../src/user/dto/register.dto';
 import { TokenResponseDto } from '../src/user/dto/token-response.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { WordDto } from '../src/word/dto/word.dto';
-import { VoteDto } from '../src/word/dto/vote.dto';
+import { VoteDto } from '../src/vote/dto/vote.dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -94,6 +94,27 @@ describe('AppController (e2e)', () => {
     });
   }
 
+  function checkWord(word: WordDto, userId?: string) {
+    expect(word).toHaveProperty('createdAt');
+    expect(word).toHaveProperty('updatedAt');
+    expect(word).toHaveProperty('id');
+    expect(word.name).toEqual(word.name);
+    expect(word.definition).toEqual(word.definition);
+    expect(word.tags[0]).toEqual(word.tags[0]);
+    expect(typeof word.score === 'number').toBeTruthy();
+    expect(word.userVoteId).toBeUndefined();
+
+    if (userId) {
+      expect(word.userId).toEqual(userId);
+      expect(word.userUpVoted).toEqual(false);
+      expect(word.userDownVoted).toEqual(false);
+    } else {
+      expect(typeof word.userId === 'string').toBeTruthy();
+      expect(word.userUpVoted).toBeUndefined();
+      expect(word.userDownVoted).toBeUndefined();
+    }
+  }
+
   it('/ (GET)', () => {
     return api.get('/')
       .expect(200)
@@ -141,24 +162,6 @@ describe('AppController (e2e)', () => {
       });
   });
 
-  function checkWord(word, userId?: string) {
-    expect(word).toHaveProperty('createdAt');
-    expect(word).toHaveProperty('updatedAt');
-    expect(word).toHaveProperty('id');
-    expect(word.name).toEqual(word.name);
-    expect(word.definition).toEqual(word.definition);
-    expect(word.tags[0]).toEqual(word.tags[0]);
-
-    if (userId) {
-      expect(word.userId).toEqual(userId);
-    }
-
-    expect(word.score).toEqual(0);
-    expect(word.userUpVoted).toEqual(false);
-    expect(word.userDownVoted).toEqual(false);
-    expect(word.userVoteId).toBeUndefined();
-  }
-
   it('/words (POST)', async () => {
     const user = await createUser();
     const auth = await login(user);
@@ -200,6 +203,38 @@ describe('AppController (e2e)', () => {
       .then((res) => {
         checkWord(res.body);
         expect(res.body.id).toEqual(word.id);
+      });
+  });
+
+  it('/words/{wordId} (GET) with an upvote', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    await voteForAWord(auth.token, word.id, true);
+
+    await api.get('/words/' + word.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.score).toEqual(1);
+        expect(res.body.userUpVoted).toBeTruthy();
+        expect(res.body.userDownVoted).toBeFalsy();
+      });
+  });
+
+  it('/words/{wordId} (GET) with a downvote', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    await voteForAWord(auth.token, word.id, false);
+
+    await api.get('/words/' + word.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.score).toEqual(-1);
+        expect(res.body.userUpVoted).toBeFalsy();
+        expect(res.body.userDownVoted).toBeTruthy();
       });
   });
 

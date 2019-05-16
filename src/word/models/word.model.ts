@@ -1,7 +1,8 @@
-import { InstanceType, ModelType, prop } from 'typegoose';
+import { arrayProp, InstanceType, ModelType, prop, Ref } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { Types } from 'mongoose';
-import { Vote } from './vote.model';
+import { Vote } from '../../vote/models/vote.model';
+import { User } from '../../user/models/user.model';
 
 export class Word extends BaseModel<Word> {
   @prop({
@@ -16,18 +17,22 @@ export class Word extends BaseModel<Word> {
 
   @prop({
     required: [true, 'userId is required'],
+    ref: User,
   })
   userId: Types.ObjectId;
 
-  @prop({
+  @arrayProp({
     required: [true, 'tags is required'],
+    items: String,
   })
   tags: string[];
 
-  @prop({
+  @arrayProp({
     required: [true, 'votes is required'],
+    default: [],
+    itemsRef: Vote,
   })
-  votes: Vote[];
+  votes: Array<Ref<Vote>>;
 
   static get model(): ModelType<Word> {
     return new Word().getModelForClass(Word, { schemaOptions });

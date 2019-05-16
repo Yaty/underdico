@@ -7,4 +7,7 @@ export class VoteDto extends BaseModelDto {
 
   @ApiModelProperty()
   readonly userId: boolean;
+
+  @ApiModelProperty()
+  readonly wordId: boolean;
 }

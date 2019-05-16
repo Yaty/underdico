@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Word } from './models/word.model';
 import { WordDto } from './dto/word.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,18 +6,24 @@ import { ModelType } from 'typegoose';
 import { BaseService } from '../shared/base.service';
 import { CreateWordDto } from './dto/create-word.dto';
 import { User } from '../user/models/user.model';
-import { WordMapper } from './mappers/word.mapper';
-import { VoteMapper } from './mappers/vote.mapper';
-import { Vote } from './models/vote.model';
+import { WordMapper } from '../shared/mappers/word.mapper';
+import { Vote } from '../vote/models/vote.model';
+import { VoteService } from '../vote/vote.service';
 
 @Injectable()
-export class WordService extends BaseService<Word, WordDto>  {
+export class WordService extends BaseService<Word, WordDto> {
   constructor(
     @InjectModel(Word.modelName) private readonly wordModel: ModelType<Word>,
-    mapper: WordMapper,
-    public readonly voteMapper: VoteMapper,
+    public readonly mapper: WordMapper,
+    private readonly voteService: VoteService,
   ) {
     super(wordModel, mapper);
+  }
+
+  private async wordDoNotExists(wordId: string): Promise<boolean> {
+    return (await this.count({
+      _id: wordId,
+    })) === 0;
   }
 
   async createWord(word: CreateWordDto, owner: User): Promise<Word> {
@@ -27,10 +33,9 @@ export class WordService extends BaseService<Word, WordDto>  {
     newWord.definition = word.definition;
     newWord.tags = word.tags;
     newWord.userId = BaseService.toObjectId(owner.id);
-    newWord.votes = [];
 
     const result = await this.create(newWord);
-    return result.toJSON() as Word;
+    return result.toJSON();
   }
 
   async getAggregatedWords(skip: number, take: number): Promise<{
@@ -41,9 +46,15 @@ export class WordService extends BaseService<Word, WordDto>  {
       words,
       count,
     ] = await Promise.all([
-      this.wordModel.find().limit(take).skip(skip).sort({
-        createdAt: 'ascending',
-      }).lean().exec(),
+      this.wordModel.find()
+        .limit(take)
+        .skip(skip)
+        .populate('votes')
+        .sort({
+          createdAt: 'ascending',
+        })
+        .lean()
+        .exec(),
       this.count(),
     ]);
 
@@ -54,7 +65,11 @@ export class WordService extends BaseService<Word, WordDto>  {
   }
 
   async findWordById(id: string): Promise<Word> {
-    const word = await this.wordModel.findById(id).lean().exec();
+    const word = await this.wordModel
+      .findById(id)
+      .populate('votes')
+      .lean()
+      .exec();
 
     if (!word) {
       throw new NotFoundException('Word not found');
@@ -70,41 +85,6 @@ export class WordService extends BaseService<Word, WordDto>  {
     return word._id;
   }
 
-  private async wordDoNotExists(wordId: string): Promise<boolean> {
-    return (await this.count({
-      _id: wordId,
-    })) === 0;
-  }
-
-  private async userAlreadyVoted(wordId: string, user: User): Promise<boolean> {
-    return (await this.count({
-      '_id': wordId,
-      'votes.userId': user.id,
-    })) !== 0;
-  }
-
-  private getUserVoteInWord(word: Word, user: User): Vote {
-    return word.votes.find((v) => WordService.objectIdToString(v.userId) === user.id);
-  }
-
-  private async addVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
-    const newVote = Vote.createModel();
-    newVote.userId = WordService.toObjectId(user.id);
-    newVote.value = voteValue;
-
-    const word = await this.wordModel.findOneAndUpdate({
-      _id: wordId,
-    }, {
-      $push: {
-        votes: newVote,
-      },
-    }, {
-      new: true,
-    }).lean().exec();
-
-    return this.getUserVoteInWord(word, user);
-  }
-
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
     const wordDoNotExists = await this.wordDoNotExists(wordId);
 
@@ -112,13 +92,17 @@ export class WordService extends BaseService<Word, WordDto>  {
       throw new NotFoundException('Word not found');
     }
 
-    const userAlreadyVoted = await this.userAlreadyVoted(wordId, user);
+    const vote = await this.voteService.createVote(wordId, voteValue, user);
 
-    if (userAlreadyVoted) {
-      throw new ConflictException('This user already voted for this word');
-    }
+    await this.wordModel.updateOne({
+      _id: wordId,
+    }, {
+      $push: {
+        votes: vote.id,
+      },
+    }).exec();
 
-    return this.addVote(wordId, voteValue, user);
+    return vote;
   }
 
   async updateVote(wordId: string, voteId: string, voteValue: boolean, user: User): Promise<Vote> {
@@ -128,32 +112,6 @@ export class WordService extends BaseService<Word, WordDto>  {
       throw new NotFoundException('Word not found');
     }
 
-    const vote = await this.wordModel.findOne({
-      '_id': wordId,
-      'votes._id': voteId,
-    }, {
-      'votes.$': 1,
-    }).lean().exec();
-
-    if (!vote) {
-      throw new NotFoundException('Vote not found');
-    }
-
-    if (vote.userId !== user.id) {
-      throw new ForbiddenException('This is not your vote');
-    }
-
-    const word = await this.wordModel.updateOne({
-      '_id': wordId,
-      'votes.userId': user.id,
-    }, {
-      $set: {
-        'votes.$.value': voteValue,
-      },
-    }, {
-      new: true,
-    }).lean().exec();
-
-    return this.getUserVoteInWord(word, user);
+    return this.voteService.updateVote(voteId, voteValue, user);
   }
 }

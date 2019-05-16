@@ -17,11 +17,11 @@ export class WordDto extends BaseModelDto {
   @ApiModelProperty()
   readonly score: number;
 
-  @ApiModelProperty()
-  readonly userUpVoted: boolean;
+  @ApiModelPropertyOptional()
+  readonly userUpVoted?: boolean;
 
-  @ApiModelProperty()
-  readonly userDownVoted: boolean;
+  @ApiModelPropertyOptional()
+  readonly userDownVoted?: boolean;
 
   @ApiModelPropertyOptional()
   readonly userVoteId?: string;

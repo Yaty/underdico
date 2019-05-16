@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { InstanceType, ModelType } from 'typegoose';
-import { BaseMapper } from './base.mapper';
+import { BaseMapper } from './mappers/base.mapper';
 import { BaseModel, BaseModelDto } from './base.model';
 
 export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> {

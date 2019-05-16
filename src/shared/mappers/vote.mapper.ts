@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BaseMapper } from '../../shared/base.mapper';
+import { BaseMapper } from './base.mapper';
 import { morphism } from 'morphism';
-import { Vote } from '../models/word.model';
-import { VoteDto } from '../dto/vote.dto';
+import { Vote } from '../../vote/models/vote.model';
+import { VoteDto } from '../../vote/dto/vote.dto';
 
 @Injectable()
 export class VoteMapper extends BaseMapper<VoteDto, Vote> {
@@ -13,10 +13,15 @@ export class VoteMapper extends BaseMapper<VoteDto, Vote> {
       updatedAt: 'updatedAt',
       value: 'value',
       userId: 'userId',
+      wordId: 'wordId',
     });
   }
 
   public map(vote: Vote): VoteDto {
     return morphism(this.schema, vote);
+  }
+
+  public mapArray(input: Vote[]): VoteDto[] {
+    return input.map(this.map);
   }
 }
