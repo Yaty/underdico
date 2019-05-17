@@ -8,6 +8,7 @@ import { TokenResponseDto } from '../src/user/dto/token-response.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { WordDto } from '../src/word/dto/word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
+import './mongodb-memory';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
