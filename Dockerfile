@@ -6,11 +6,8 @@ COPY package*.json tsconfig*.json ./
 RUN npm install
 
 # Bundle app source
-COPY src config ./
+COPY . .
 RUN npm run build
-
-# Remove dev dependencies
-RUN npm prune --production && rm -rf src
 
 EXPOSE 8080
 CMD ["node", "."]
