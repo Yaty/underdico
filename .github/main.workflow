@@ -8,20 +8,20 @@ workflow "Deploy" {
 }
 
 action "GitHub Action for Docker" {
-  uses = "actions/docker/cli@8cdf801b322af5f369e00d85e9cf3a7122f49108"
+  uses = "actions/docker/cli@master"
   args = "build -t underdico ."
 }
 
 action "Test" {
-  uses = "actions/docker/cli@8cdf801b322af5f369e00d85e9cf3a7122f49108"
+  uses = "actions/docker/cli@master"
   needs = ["GitHub Action for Docker"]
-  runs = "run underdico npm run test:e2e"
+  args = "run underdico npm run test:e2e"
 }
 
 action "Lint" {
-  uses = "actions/docker/cli@8cdf801b322af5f369e00d85e9cf3a7122f49108"
+  uses = "actions/docker/cli@master"
   needs = ["GitHub Action for Docker"]
-  runs = "run underdico npm run lint"
+  args = "run underdico npm run lint"
 }
 
 action "On master" {
