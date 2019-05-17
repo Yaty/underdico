@@ -9,5 +9,8 @@ RUN npm install
 COPY . .
 RUN npm run build
 
+# For testing
+ENV MONGOMS_DOWNLOAD_DIR=/usr/src/app/node_modules/mongodb-memory-server-core
+
 EXPOSE 8080
 CMD ["node", "."]
