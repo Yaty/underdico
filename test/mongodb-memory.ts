@@ -4,6 +4,7 @@ import * as config from 'config';
 let mongod;
 
 beforeAll(async () => {
+  jest.setTimeout(100000);
   mongod = new MongoMemoryServer();
   const uri = await mongod.getConnectionString();
   const configStub = sinon.stub(config, 'get');
