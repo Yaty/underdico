@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
-import * as packageJson from '../package.json';
+import * as packageJson from 'pjson';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

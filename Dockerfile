@@ -6,7 +6,7 @@ COPY package*.json tsconfig*.json ./
 RUN npm install
 
 # Bundle app source
-COPY src .
+COPY src config ./
 RUN npm run build
 
 # Remove dev dependencies
