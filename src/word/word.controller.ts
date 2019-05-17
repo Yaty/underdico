@@ -24,9 +24,7 @@ import { VoteDto } from '../vote/dto/vote.dto';
 import { CreateVoteParamsDto } from './dto/create-vote-params.dto';
 import { UpdateVoteParamsDto } from './dto/update-vote-params.dto';
 import { VoteMapper } from '../shared/mappers/vote.mapper';
-import { ExtractJwt } from 'passport-jwt';
-import { decode } from 'jsonwebtoken';
-import { JwtPayload } from '../shared/auth/jwt-payload.interface';
+import { OptionalJwtAuthGuard } from '../shared/guards/optional-jwt-auth.guard';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -114,6 +112,7 @@ export class WordController {
   }
 
   @Get(':wordId')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
   @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
   async findById(
@@ -121,17 +120,7 @@ export class WordController {
     @Request() req,
   ): Promise<WordDto> {
     const word = await this.wordService.findWordById(wordId);
-
-    // This is a workaround to get the userId
-    // FIXME : https://stackoverflow.com/questions/56173298/optional-authentication-in-nest-js-with-nestjs-passport
-    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-    let userId;
-
-    if (token) {
-      userId = (decode(token) as JwtPayload).id;
-    }
-
-    return this.wordService.mapper.map(word, userId);
+    return this.wordService.mapper.map(word, req.user && req.user._id);
   }
 
   @Post(':wordId/votes')
