@@ -40,7 +40,10 @@ action "Tag image for GCR" {
   uses = "actions/docker/tag@master"
   needs = ["Setup Google Cloud"]
   args = "[\"underdico\", \"gcr.io/$PROJECT_ID/$APPLICATION_NAME\"]"
-  secrets = ["PROJECT_ID", "APPLICATION_NAME"]
+  secrets = [
+    "APPLICATION_NAME",
+    "PROJECT_ID",
+  ]
 }
 
 action "Set Credential Helper for Docker" {
@@ -54,13 +57,16 @@ action "Push image to GCR" {
   needs = ["Set Credential Helper for Docker"]
   runs = "sh -c"
   args = "[\"docker push gcr.io/$PROJECT_ID/$APPLICATION_NAME\"]"
-  secrets = ["PROJECT_ID", "APPLICATION_NAME"]
+  secrets = [
+    "APPLICATION_NAME",
+    "PROJECT_ID",
+  ]
 }
 
 action "Load GKE kube credentials" {
   uses = "actions/gcloud/cli@master"
   needs = ["Push image to GCR"]
-  args = "container clusters get-credentials $CLUSTER_NAME --zone us-central1-a --project $PROJECT_ID"
+  args = "container clusters get-credentials cluster-1 --zone europe-west1-c --project $PROJECT_ID"
   secrets = ["PROJECT_ID"]
 }
 
@@ -69,7 +75,11 @@ action "Deploy to GKE" {
   needs = ["Load GKE kube credentials"]
   runs = "sh -l -c"
   args = "[\"SHORT_REF=$(echo ${GITHUB_SHA} | head -c7) && cat $GITHUB_WORKSPACE/config.yml | sed 's/PROJECT_ID/'\\\"$PROJECT_ID\\\"'/' | sed 's/APPLICATION_NAME/'\\\"$APPLICATION_NAME\\\"'/' | sed 's/TAG/'\\\"$SHORT_REF\\\"'/' | kubectl apply -f - \"]"
-  secrets = ["APPLICATION_NAME", "PROJECT_ID", "DEPLOYMENT_NAME"]
+  secrets = [
+    "APPLICATION_NAME",
+    "DEPLOYMENT_NAME",
+    "PROJECT_ID",
+  ]
 }
 
 action "Verify GKE deployment" {
