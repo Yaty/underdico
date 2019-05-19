@@ -1,5 +1,14 @@
-import { Request, Body, Controller, HttpException, HttpStatus, Param, Patch, Post, UseGuards, Get } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiUseTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnprocessableEntityResponse,
+  ApiUseTags,
+} from '@nestjs/swagger';
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { User } from './models/user.model';
@@ -23,9 +32,12 @@ export class UserController {
 
   @Post()
   @ApiCreatedResponse({ type: UserDto })
-  @ApiBadRequestResponse({ type: ApiException })
+  @ApiConflictResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Register'))
-  async register(@Body() dto: RegisterDto): Promise<UserDto> {
+  async register(
+    @Body() dto: RegisterDto,
+  ): Promise<UserDto> {
     const [usernameExists, emailExists] = await Promise.all([
       this.userService.findOne({
         username: dto.username,
@@ -50,6 +62,7 @@ export class UserController {
   @Post('token')
   @ApiCreatedResponse({ type: TokenResponseDto })
   @ApiBadRequestResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Login'))
   async login(@Body() dto: CredentialsDto): Promise<TokenResponseDto> {
     return this.userService.login(dto);
@@ -59,7 +72,8 @@ export class UserController {
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiOkResponse({ type: UserDto })
-  @ApiBadRequestResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'FindById'))
   async findById(
     @Param() params: FindByIdParamsDto,
@@ -72,7 +86,8 @@ export class UserController {
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiOkResponse({ type: UserDto })
-  @ApiBadRequestResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Update'))
   async update(
     @Param() params: UpdateParamsDto,

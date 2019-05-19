@@ -7,9 +7,11 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiImplicitQuery,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
+  ApiUnprocessableEntityResponse,
   ApiUseTags,
 } from '@nestjs/swagger';
 import { UserRole } from '../user/models/user-role.enum';
@@ -39,7 +41,7 @@ export class WordController {
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiCreatedResponse({ type: WordDto })
-  @ApiBadRequestResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'Create'))
   async create(
     @Request() req,
@@ -114,6 +116,8 @@ export class WordController {
   @Get(':wordId')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
   async findById(
     @Param('wordId') wordId,
@@ -127,6 +131,8 @@ export class WordController {
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiCreatedResponse({ type: VoteDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'CreateVote'))
   async createVote(
     @Param() params: CreateVoteParamsDto,
@@ -141,6 +147,8 @@ export class WordController {
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiOkResponse({ type: VoteDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'UpdateVote'))
   async updateVote(
     @Param() params: UpdateVoteParamsDto,

@@ -8,8 +8,8 @@ import { TokenResponseDto } from '../src/user/dto/token-response.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { WordDto } from '../src/word/dto/word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
-import './mongodb-memory';
 import { UserDto } from '../src/user/dto/user.dto';
+import { configure } from '../src/app.configuration';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -21,6 +21,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    configure(app);
     await app.init();
     api = supertest(app.getHttpServer());
   });
@@ -32,12 +33,12 @@ describe('AppController (e2e)', () => {
   function createUser(): Promise<RegisterDto> {
     return new Promise((resolve, reject) => {
       const user: RegisterDto = {
-        username: uuid(),
-        password: uuid(),
+        username: uuid().substr(0, 10),
+        password: uuid().substr(0, 10),
         email: `${uuid()}@${uuid()}.fr`,
       };
 
-      return api.post('/users')
+      return api.post('/api/users')
         .send(user)
         .expect(201)
         .then(() => {
@@ -49,7 +50,7 @@ describe('AppController (e2e)', () => {
 
   function login(user: RegisterDto): Promise<TokenResponseDto> {
     return new Promise((resolve, reject) => {
-      api.post('/users/token')
+      api.post('/api/users/token')
         .send({
           username: user.username,
           password: user.password,
@@ -70,7 +71,7 @@ describe('AppController (e2e)', () => {
         tags: [uuid()],
       };
 
-      api.post('/words')
+      api.post('/api/words')
         .set('Authorization', 'Bearer ' + token)
         .send(word)
         .expect(201)
@@ -83,7 +84,7 @@ describe('AppController (e2e)', () => {
 
   function voteForAWord(token: string, wordId: string, voteValue: boolean): Promise<VoteDto> {
     return new Promise((resolve, reject) => {
-       api.post('/words/' + wordId + '/votes')
+       api.post('/api/words/' + wordId + '/votes')
         .set('Authorization', 'Bearer ' + token)
         .send({
           value: voteValue,
@@ -118,7 +119,7 @@ describe('AppController (e2e)', () => {
   }
 
   it('/ (GET)', () => {
-    return api.get('/')
+    return api.get('/api')
       .expect(200)
       .then((res) => {
         expect(res.body).toHaveProperty('startedAt');
@@ -138,12 +139,12 @@ describe('AppController (e2e)', () => {
 
   it('/users (POST)', () => {
     const user: RegisterDto = {
-      username: uuid(),
-      password: uuid(),
+      username: uuid().substr(0, 10),
+      password: uuid().substr(0, 10),
       email: `${uuid()}@${uuid()}.fr`,
     };
 
-    return api.post('/users')
+    return api.post('/api/users')
       .send(user)
       .expect(201)
       .then((res) => {
@@ -151,11 +152,35 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/users (POST) with validation', () => {
+    const user = {
+      username: uuid() + uuid(),
+      password: 444,
+      email: uuid(),
+    };
+
+    return api.post('/api/users')
+      .send(user)
+      .expect(422)
+      .then((res) => {
+        expect(res.body.statusCode).toEqual(422);
+        expect(res.body.error).toEqual('Validation Error');
+        expect(res.body.message).toEqual('Validation Error');
+        expect(Array.isArray(res.body.errors)).toBeTruthy();
+        expect(res.body.errors[0].property).toEqual('email');
+        expect(res.body.errors[0].constraints.isEmail).toBeTruthy();
+        expect(res.body.errors[1].property).toEqual('username');
+        expect(res.body.errors[1].constraints.length).toBeTruthy();
+        expect(res.body.errors[2].property).toEqual('password');
+        expect(res.body.errors[2].constraints.length).toBeTruthy();
+      });
+  });
+
   it('/users/{userId} (GET)', async () => {
     const user = await createUser();
     const auth = await login(user);
 
-    await api.get('/users/' + auth.userId)
+    await api.get('/api/users/' + auth.userId)
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
@@ -167,7 +192,7 @@ describe('AppController (e2e)', () => {
     const user = await createUser();
     const auth = await login(user);
 
-    await api.patch('/users/' + auth.userId)
+    await api.patch('/api/users/' + auth.userId)
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .send({
@@ -181,7 +206,7 @@ describe('AppController (e2e)', () => {
   it('/users/token (POST)', async () => {
     const user = await createUser();
 
-    await api.post('/users/token')
+    await api.post('/api/users/token')
       .send({
         username: user.username,
         password: user.password,
@@ -205,7 +230,7 @@ describe('AppController (e2e)', () => {
       tags: [uuid()],
     };
 
-    await api.post('/words')
+    await api.post('/api/words')
       .set('Authorization', 'Bearer ' + auth.token)
       .send(word)
       .expect(201)
@@ -215,7 +240,7 @@ describe('AppController (e2e)', () => {
   });
 
   it('/words (GET)', () => {
-    return api.get('/words')
+    return api.get('/api/words')
       .expect(200)
       .then((res) => {
         expect(Array.isArray(res.body)).toBeTruthy();
@@ -231,7 +256,7 @@ describe('AppController (e2e)', () => {
     const auth = await login(user);
     const word = await createWord(auth.token);
 
-    await api.get('/words/' + word.id)
+    await api.get('/api/words/' + word.id)
       .expect(200)
       .then((res) => {
         checkWord(res.body);
@@ -245,7 +270,7 @@ describe('AppController (e2e)', () => {
     const word = await createWord(auth.token);
     await voteForAWord(auth.token, word.id, true);
 
-    await api.get('/words/' + word.id)
+    await api.get('/api/words/' + word.id)
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
@@ -261,7 +286,7 @@ describe('AppController (e2e)', () => {
     const word = await createWord(auth.token);
     await voteForAWord(auth.token, word.id, false);
 
-    await api.get('/words/' + word.id)
+    await api.get('/api/words/' + word.id)
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
@@ -272,7 +297,7 @@ describe('AppController (e2e)', () => {
   });
 
   it('/words/random (GET)', async () => {
-    await api.get('/words/random')
+    await api.get('/api/words/random')
       .expect(302)
       .then((res) => {
         expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
@@ -284,7 +309,7 @@ describe('AppController (e2e)', () => {
     const auth = await login(user);
     const word = await createWord(auth.token);
 
-    await api.post('/words/' + word.id + '/votes')
+    await api.post('/api/words/' + word.id + '/votes')
       .set('Authorization', 'Bearer ' + auth.token)
       .send({
         value: true,
@@ -303,7 +328,7 @@ describe('AppController (e2e)', () => {
     const word = await createWord(auth.token);
     const vote = await voteForAWord(auth.token, word.id, true);
 
-    await api.patch('/words/' + word.id + '/votes/' + vote.id)
+    await api.patch('/api/words/' + word.id + '/votes/' + vote.id)
       .set('Authorization', 'Bearer ' + auth.token)
       .send({
         value: false,

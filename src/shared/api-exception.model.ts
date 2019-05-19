@@ -5,7 +5,10 @@ export class ApiException {
   @ApiModelPropertyOptional() message?: string;
   @ApiModelPropertyOptional() status?: string;
   @ApiModelPropertyOptional() error?: string;
-  @ApiModelPropertyOptional() errors?: any;
+  @ApiModelPropertyOptional({
+    type: Object,
+    isArray: true,
+  }) errors?: object[];
   @ApiModelPropertyOptional() timestamp?: string;
   @ApiModelPropertyOptional() path?: string;
 }

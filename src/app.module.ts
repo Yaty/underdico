@@ -20,6 +20,7 @@ import { VoteModule } from './vote/vote.module';
         retryAttempts: 3,
         useNewUrlParser: true,
         useCreateIndex: true,
+        useFindAndModify: false,
       }),
       inject: [ConfigurationService],
     }),
