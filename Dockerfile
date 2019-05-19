@@ -7,10 +7,7 @@ RUN npm install
 
 # Bundle app source
 COPY . .
-RUN npm run build
-
-# Clean
-RUN npm prune --production && rm -rf src test
+RUN npm run build && npm prune --production && rm -rf src test config
 
 EXPOSE 8080
 CMD ["node", "."]
