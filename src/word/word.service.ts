@@ -79,6 +79,10 @@ export class WordService extends BaseService<Word, WordDto> {
     return word._id;
   }
 
+  getDailyWordId(): Promise<string> {
+    return this.voteService.getTodayBestWordIdByVote();
+  }
+
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
     const wordDoNotExists = await this.doNotExists(wordId);
 

@@ -97,6 +97,17 @@ describe('AppController (e2e)', () => {
     });
   }
 
+  function getWords(): Promise<WordDto[]> {
+    return new Promise((resolve, reject) => {
+      api.get('/api/words')
+        .expect(200)
+        .then((res) => {
+          resolve(res.body);
+        })
+        .catch(reject);
+    });
+  }
+
   function checkWord(word: WordDto, userId?: string) {
     expect(word).toHaveProperty('createdAt');
     expect(word).toHaveProperty('updatedAt');
@@ -118,15 +129,6 @@ describe('AppController (e2e)', () => {
     }
   }
 
-  it('/ (GET)', () => {
-    return api.get('/api')
-      .expect(200)
-      .then((res) => {
-        expect(res.body).toHaveProperty('startedAt');
-        expect(res.body).toHaveProperty('uptime');
-      });
-  });
-
   function checkUser(expectedUser, user: UserDto) {
     expect(user.username).toEqual(expectedUser.username);
     expect(user.email).toEqual(expectedUser.email);
@@ -136,6 +138,15 @@ describe('AppController (e2e)', () => {
     expect(user).toHaveProperty('createdAt');
     expect(user).toHaveProperty('updatedAt');
   }
+
+  it('/ (GET)', () => {
+    return api.get('/api')
+      .expect(200)
+      .then((res) => {
+        expect(res.body).toHaveProperty('startedAt');
+        expect(res.body).toHaveProperty('uptime');
+      });
+  });
 
   it('/users (POST)', () => {
     const user: RegisterDto = {
@@ -301,6 +312,25 @@ describe('AppController (e2e)', () => {
       .expect(302)
       .then((res) => {
         expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
+      });
+  });
+
+  it('/words/daily (GET)', async () => {
+    const words = await getWords();
+    const bestWordScore = Math.max.apply(Math, words.map((w) => w.score));
+    const user = await createUser();
+    const auth = await login(user);
+    const bestWord = await createWord(auth.token);
+
+    for (let i = 0; i <= bestWordScore; i++) {
+      await createWord(auth.token);
+      await voteForAWord(auth.token, bestWord.id, true);
+    }
+
+    await api.get('/api/words/daily')
+      .expect(302)
+      .then((res) => {
+        expect(res.header.location).toMatch(new RegExp('http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWord.id));
       });
   });
 

@@ -59,4 +59,44 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
       new: true,
     }).lean().exec();
   }
+
+  async getTodayBestWordIdByVote() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const bestWords = await this.voteModel
+      .aggregate()
+      .match({
+        updatedAt: {
+          $gte: start,
+          $lte: end,
+        },
+      })
+      .group({
+        _id: '$wordId',
+        score: {
+          $sum: {
+            $cond: [
+              '$value',
+              1,
+              -1,
+            ],
+          },
+        },
+      })
+      .sort({
+        score: -1,
+      })
+      .limit(1)
+      .exec();
+
+    if (bestWords.length === 0) {
+      throw new NotFoundException('No daily word');
+    }
+
+    return BaseService.objectIdToString(bestWords[0]._id);
+  }
 }

@@ -113,6 +113,18 @@ export class WordController {
     res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
   }
 
+  @Get('daily')
+  @ApiResponse({ status: HttpStatus.OK, type: WordDto })
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(Word.modelName, 'DailyWord'))
+  async getDailyWord(
+    @Request() req,
+    @Response() res,
+  ): Promise<void> {
+    const wordId = await this.wordService.getDailyWordId();
+    res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
+  }
+
   @Get(':wordId')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
