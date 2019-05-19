@@ -9,6 +9,7 @@ import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { WordDto } from '../src/word/dto/word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
 import './mongodb-memory';
+import { UserDto } from '../src/user/dto/user.dto';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -125,6 +126,16 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  function checkUser(expectedUser, user: UserDto) {
+    expect(user.username).toEqual(expectedUser.username);
+    expect(user.email).toEqual(expectedUser.email);
+    expect(user.role).toEqual('User');
+    expect((user as any).password).toBeUndefined();
+    expect(user).toHaveProperty('id');
+    expect(user).toHaveProperty('createdAt');
+    expect(user).toHaveProperty('updatedAt');
+  }
+
   it('/users (POST)', () => {
     const user: RegisterDto = {
       username: uuid(),
@@ -136,13 +147,19 @@ describe('AppController (e2e)', () => {
       .send(user)
       .expect(201)
       .then((res) => {
-        expect(res.body.username).toEqual(user.username);
-        expect(res.body.email).toEqual(user.email);
-        expect(res.body.role).toEqual('User');
-        expect(res.body.password).toBeUndefined();
-        expect(res.body).toHaveProperty('id');
-        expect(res.body).toHaveProperty('createdAt');
-        expect(res.body).toHaveProperty('updatedAt');
+        checkUser(user, res.body);
+      });
+  });
+
+  it('/users/{userId} (GET)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    await api.get('/users/' + auth.userId)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        checkUser(user, res.body);
       });
   });
 

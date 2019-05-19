@@ -1,4 +1,4 @@
-import { Request, Body, Controller, HttpException, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Request, Body, Controller, HttpException, HttpStatus, Param, Patch, Post, UseGuards, Get } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiUseTags } from '@nestjs/swagger';
 import { ApiException } from '../shared/api-exception.model';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
@@ -14,6 +14,7 @@ import { Roles } from '../shared/decorators/roles.decorator';
 import { UserRole } from './models/user-role.enum';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../shared/guards/roles.guard';
+import { FindByIdParamsDto } from './dto/find-by-id-params.dto';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
@@ -52,6 +53,19 @@ export class UserController {
   @ApiOperation(GetOperationId(User.modelName, 'Login'))
   async login(@Body() dto: CredentialsDto): Promise<TokenResponseDto> {
     return this.userService.login(dto);
+  }
+
+  @Get(':userId')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(User.modelName, 'FindById'))
+  async findById(
+    @Param() params: FindByIdParamsDto,
+  ): Promise<UserDto> {
+    const user = await this.userService.findById(params.userId);
+    return this.userService.mapper.map(user);
   }
 
   @Patch(':userId')

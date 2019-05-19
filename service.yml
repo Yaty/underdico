@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: underdico
+  labels:
+    app: underdico
+spec:
+  selector:
+    app: underdico
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer
+  loadBalancerIP: "35.241.163.211"
