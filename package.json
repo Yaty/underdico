@@ -20,7 +20,7 @@
     "test:e2e": "jest --detectOpenHandles --forceExit --config ./test/jest-e2e.json",
     "tag": "sudo docker build -t eu.gcr.io/underdico/underdico .",
     "push": "sudo docker push eu.gcr.io/underdico/underdico",
-    "set-image": "kubectl set image deployment underdico underdico=eu.gcr.io/underdico/underdico:latest",
+    "set-image": "kubectl set image deployment underdico underdico=$(sudo docker inspect --format='{{index .RepoDigests 0}}' eu.gcr.io/underdico/underdico:latest)",
     "deploy": "npm run tag && npm run push && npm run set-image"
   },
   "dependencies": {
