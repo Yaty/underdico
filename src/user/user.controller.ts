@@ -64,7 +64,7 @@ export class UserController {
   async findById(
     @Param() params: FindByIdParamsDto,
   ): Promise<UserDto> {
-    const user = await this.userService.findById(params.userId);
+    const user = await this.userService.findUserById(params.userId);
     return this.userService.mapper.map(user);
   }
 

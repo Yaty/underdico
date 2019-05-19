@@ -132,4 +132,14 @@ export class UserService extends BaseService<User, UserDto> {
       new: true,
     }).lean().exec();
   }
+
+  async findUserById(userId: string): Promise<User> {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
 }
