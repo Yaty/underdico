@@ -26,7 +26,7 @@ export class WordService extends BaseService<Word, WordDto> {
     newWord.name = word.name;
     newWord.definition = word.definition;
     newWord.tags = word.tags;
-    newWord.userId = BaseService.toObjectId(owner.id);
+    newWord.userId = owner._id;
 
     const result = await this.create(newWord);
     return result.toJSON();
@@ -96,7 +96,7 @@ export class WordService extends BaseService<Word, WordDto> {
       _id: wordId,
     }, {
       $push: {
-        votes: vote.id,
+        votes: vote._id,
       },
     }).exec();
 
@@ -111,5 +111,39 @@ export class WordService extends BaseService<Word, WordDto> {
     }
 
     return this.voteService.updateVote(voteId, voteValue, user);
+  }
+
+  async getUserWordsTotalScore(userId: string): Promise<number> {
+    const res = await this.wordModel
+      .aggregate()
+      .match({
+        userId: BaseService.toObjectId(userId),
+      })
+      .lookup({
+        from: 'votes',
+        localField: '_id',
+        foreignField: 'wordId',
+        as: 'votes',
+      })
+      .unwind('$votes')
+      .group({
+        _id: null,
+        total: {
+          $sum: {
+            $cond: [
+              '$votes.value',
+              1,
+              -1,
+            ],
+          },
+        },
+      })
+      .exec();
+
+    if (res.length === 0) {
+      return 0;
+    }
+
+    return res[0].total;
   }
 }

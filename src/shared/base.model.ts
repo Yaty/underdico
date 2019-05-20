@@ -1,6 +1,6 @@
 import { ApiModelPropertyOptional } from '@nestjs/swagger';
-import { SchemaOptions } from 'mongoose';
-import { Typegoose, prop } from 'typegoose';
+import { SchemaOptions, Types } from 'mongoose';
+import { prop, Typegoose } from 'typegoose';
 
 export class BaseModelDto {
   @ApiModelPropertyOptional({ type: String, format: 'date-time' })
@@ -23,7 +23,7 @@ export abstract class BaseModel<T> extends Typegoose {
   updatedAt: Date;
 
   @ApiModelPropertyOptional()
-  id: string;
+  '_id': Types.ObjectId;
 }
 
 export const schemaOptions: SchemaOptions = {

@@ -12,6 +12,7 @@ import { randomBytes, scrypt } from 'crypto';
 import { UserMapper } from '../shared/mappers/user.mapper';
 import { UserDto } from './dto/user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { WordService } from '../word/word.service';
 
 @Injectable()
 export class UserService extends BaseService<User, UserDto> {
@@ -19,6 +20,7 @@ export class UserService extends BaseService<User, UserDto> {
     @InjectModel(User.modelName) private readonly userModel: ModelType<User>,
     mapper: UserMapper,
     @Inject(forwardRef(() => AuthService)) readonly authService: AuthService,
+    @Inject(forwardRef(() => WordService)) readonly wordService: WordService,
   ) {
     super(userModel, mapper);
   }
@@ -61,7 +63,7 @@ export class UserService extends BaseService<User, UserDto> {
     });
   }
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<User> {
     const { username, email, password } = dto;
 
     const newUser = User.createModel();
@@ -69,16 +71,16 @@ export class UserService extends BaseService<User, UserDto> {
     newUser.password = await this.hashPassword(password);
     newUser.email = email.trim();
 
-    const result = await this.create(newUser);
-    return result.toJSON();
+    const user = await this.userModel.create(newUser);
+    return user.toJSON();
   }
 
   async login(dto: CredentialsDto): Promise<TokenResponseDto> {
     const { username, password } = dto;
 
-    const user = await this.findOne({
+    const user = await this.userModel.findOne({
       username,
-    });
+    }).lean().exec();
 
     if (!user) {
       throw new HttpException('Invalid credentials', HttpStatus.BAD_REQUEST);
@@ -112,13 +114,16 @@ export class UserService extends BaseService<User, UserDto> {
   }
 
   async updateUser(userId: string, dto: UpdateUserDto, authenticatedUser: User): Promise<User> {
-    const user = await this.findById(userId);
+    const user = await this.userModel
+      .findById(userId)
+      .lean()
+      .exec();
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    if (BaseService.objectIdToString(user._id) !== authenticatedUser.id) {
+    if (BaseService.objectIdToString(user._id) !== BaseService.objectIdToString(authenticatedUser._id)) {
       throw new ForbiddenException('You do not own this user');
     }
 
@@ -134,12 +139,16 @@ export class UserService extends BaseService<User, UserDto> {
   }
 
   async findUserById(userId: string): Promise<User> {
-    const user = await this.findById(userId);
+    const user = await this.userModel
+      .findById(userId)
+      .lean()
+      .exec();
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
+    user.karma = await this.wordService.getUserWordsTotalScore(userId);
     return user;
   }
 }

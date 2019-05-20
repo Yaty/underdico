@@ -31,7 +31,7 @@ export class WordMapper extends BaseMapper<WordDto, Word> {
       Object.assign(schema, {
         userDownVoted: () => userVote && userVote.value === false || false,
         userUpVoted: () => userVote && userVote.value === true || false,
-        userVoteId: () => userVote && userVote.id,
+        userVoteId: () => userVote && userVote._id,
       });
     }
 

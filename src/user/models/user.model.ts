@@ -27,6 +27,8 @@ export class User extends BaseModel<User> {
   })
   role?: UserRole;
 
+  karma?: number;
+
   static get model(): ModelType<User> {
     return new User().getModelForClass(User, {
       schemaOptions,

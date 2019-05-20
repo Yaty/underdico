@@ -199,6 +199,24 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/users/{userId} (GET) with karma', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    await voteForAWord(auth.token, word.id, true);
+
+    const user2 = await createUser();
+    const auth2 = await login(user2);
+    await voteForAWord(auth2.token, word.id, true);
+
+    await api.get('/api/users/' + auth.userId)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.karma).toEqual(2);
+      });
+  });
+
   it('/users/{userId} (PATCH)', async () => {
     const user = await createUser();
     const auth = await login(user);
@@ -317,13 +335,14 @@ describe('AppController (e2e)', () => {
 
   it('/words/daily (GET)', async () => {
     const words = await getWords();
-    const bestWordScore = Math.max.apply(Math, words.map((w) => w.score));
+    const bestWordScore = words.length > 0 ? Math.max(...words.map((w) => w.score)) : 0;
     const user = await createUser();
     const auth = await login(user);
     const bestWord = await createWord(auth.token);
 
-    for (let i = 0; i <= bestWordScore; i++) {
-      await createWord(auth.token);
+    await createWord(auth.token); // populate with random word
+
+    for (let i = 0; i < bestWordScore + 1; i++) {
       await voteForAWord(auth.token, bestWord.id, true);
     }
 

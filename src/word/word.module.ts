@@ -17,5 +17,6 @@ import { VoteMapper } from '../shared/mappers/vote.mapper';
   ],
   controllers: [WordController],
   providers: [WordService, WordMapper, VoteMapper],
+  exports: [WordService],
 })
 export class WordModule {}

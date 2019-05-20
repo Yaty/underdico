@@ -14,10 +14,11 @@ export class UserMapper extends BaseMapper<UserDto, User> {
       role: 'role',
       createdAt: 'createdAt',
       updatedAt: 'updatedAt',
+      karma: 'karma',
     });
   }
 
-  public map(user: User): UserDto {
+  public map(user: User, karma?: number): UserDto {
     return morphism(this.schema, user);
   }
 

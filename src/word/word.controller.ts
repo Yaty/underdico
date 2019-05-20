@@ -49,8 +49,8 @@ export class WordController {
     @Body() dto: CreateWordDto,
   ): Promise<void> {
     const word = await this.wordService.createWord(dto, req.user);
-    res.set('Location', `${req.protocol}://${req.get('host')}/api/words/${word.id}`);
-    res.status(201).json(await this.wordService.mapper.map(word, req.user.id));
+    res.set('Location', `${req.protocol}://${req.get('host')}/api/words/${word._id}`);
+    res.status(201).json(await this.wordService.mapper.map(word, req.user._id));
   }
 
   @Get()
@@ -98,7 +98,7 @@ export class WordController {
     res.set('Content-Range', `${skip}-${skip + words.length}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
     res.status(200).json(
-      this.wordService.mapper.mapArray(words, req.user && req.user.id),
+      this.wordService.mapper.mapArray(words, req.user && req.user._id),
     );
   }
 

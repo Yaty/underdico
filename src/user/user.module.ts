@@ -4,12 +4,16 @@ import { User } from './models/user.model';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { UserMapper } from '../shared/mappers/user.mapper';
+import { WordModule } from '../word/word.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{
-    name: User.modelName,
-    schema: User.model.schema,
-  }])],
+  imports: [
+    MongooseModule.forFeature([{
+      name: User.modelName,
+      schema: User.model.schema,
+    }]),
+    WordModule,
+  ],
   providers: [UserService, UserMapper],
   controllers: [UserController],
   exports: [UserService],

@@ -24,7 +24,7 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
   }
 
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
-    const userVoteExistsForAWord = await this.userVoteExistsForAWord(wordId, user.id);
+    const userVoteExistsForAWord = await this.userVoteExistsForAWord(wordId, BaseService.objectIdToString(user._id));
 
     if (userVoteExistsForAWord) {
       throw new ConflictException('A vote already exists for this word by this user');
@@ -32,10 +32,10 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
 
     const vote = Vote.createModel();
     vote.wordId = BaseService.toObjectId(wordId);
-    vote.userId = BaseService.toObjectId(user.id);
+    vote.userId = user._id;
     vote.value = voteValue;
-    const result = await this.create(vote);
-    return result.toJSON();
+    const createdVote = await this.create(vote);
+    return createdVote.toJSON();
   }
 
   async updateVote(voteId: string, voteValue: boolean, user: User): Promise<Vote> {
@@ -47,7 +47,7 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
       throw new NotFoundException('Vote not found');
     }
 
-    if (BaseService.objectIdToString(vote.userId) !== user.id) {
+    if (BaseService.objectIdToString(vote.userId) !== BaseService.objectIdToString(user._id)) {
       throw new ForbiddenException('This is not your vote');
     }
 
