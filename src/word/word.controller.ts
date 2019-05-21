@@ -97,7 +97,7 @@ export class WordController {
       count,
     } = await this.wordService.getAggregatedWords(skip, take);
 
-    res.set('Content-Range', `${skip}-${skip + words.length}/${count}`);
+    res.set('Content-Range', `${skip}-${skip + words.length - 1}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
 
     const mappedWords = this.wordService.mapper.mapArray(words, req.user && req.user._id);
