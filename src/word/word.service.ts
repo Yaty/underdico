@@ -26,20 +26,6 @@ export class WordService extends BaseService<Word, WordDto> {
     as: 'user',
   };
 
-  private readonly projectOption = {
-    _id: 1,
-    userId: 1,
-    definition: 1,
-    createdAt: 1,
-    updatedAt: 1,
-    name: 1,
-    tags: 1,
-    votes: 1,
-    user: {
-      $arrayElemAt: ['$user', 0],
-    },
-  };
-
   constructor(
     @InjectModel(Word.modelName) private readonly wordModel: ModelType<Word>,
     public readonly mapper: WordMapper,
@@ -78,7 +64,7 @@ export class WordService extends BaseService<Word, WordDto> {
         .skip(skip)
         .lookup(this.votesLookupOption)
         .lookup(this.usersLookupOption)
-        .project(this.projectOption)
+        .unwind('user')
         .sort({
           createdAt: 'ascending',
         })
@@ -100,7 +86,7 @@ export class WordService extends BaseService<Word, WordDto> {
       })
       .lookup(this.votesLookupOption)
       .lookup(this.usersLookupOption)
-      .project(this.projectOption)
+      .unwind('user')
       .exec();
 
     if (words.length === 0) {
