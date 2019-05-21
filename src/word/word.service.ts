@@ -12,6 +12,34 @@ import { VoteService } from '../vote/vote.service';
 
 @Injectable()
 export class WordService extends BaseService<Word, WordDto> {
+  private readonly votesLookupOption = {
+    from: 'votes',
+    localField: '_id',
+    foreignField: 'wordId',
+    as: 'votes',
+  };
+
+  private readonly usersLookupOption = {
+    from: 'users',
+    localField: 'userId',
+    foreignField: '_id',
+    as: 'user',
+  };
+
+  private readonly projectOption = {
+    _id: 1,
+    userId: 1,
+    definition: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    name: 1,
+    tags: 1,
+    votes: 1,
+    user: {
+      $arrayElemAt: ['$user', 0],
+    },
+  };
+
   constructor(
     @InjectModel(Word.modelName) private readonly wordModel: ModelType<Word>,
     public readonly mapper: WordMapper,
@@ -29,7 +57,11 @@ export class WordService extends BaseService<Word, WordDto> {
     newWord.userId = owner._id;
 
     const result = await this.create(newWord);
-    return result.toJSON();
+
+    return {
+      user: owner,
+      ...result.toJSON(),
+    };
   }
 
   async getAggregatedWords(skip: number, take: number): Promise<{
@@ -40,14 +72,16 @@ export class WordService extends BaseService<Word, WordDto> {
       words,
       count,
     ] = await Promise.all([
-      this.wordModel.find()
+      this.wordModel
+        .aggregate()
         .limit(take)
         .skip(skip)
-        .populate('votes')
+        .lookup(this.votesLookupOption)
+        .lookup(this.usersLookupOption)
+        .project(this.projectOption)
         .sort({
           createdAt: 'ascending',
         })
-        .lean()
         .exec(),
       this.count(),
     ]);
@@ -59,17 +93,21 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async findWordById(id: string): Promise<Word> {
-    const word = await this.wordModel
-      .findById(id)
-      .populate('votes')
-      .lean()
+    const words = await this.wordModel
+      .aggregate()
+      .match({
+        _id: BaseService.toObjectId(id),
+      })
+      .lookup(this.votesLookupOption)
+      .lookup(this.usersLookupOption)
+      .project(this.projectOption)
       .exec();
 
-    if (!word) {
+    if (words.length === 0) {
       throw new NotFoundException('Word not found');
     }
 
-    return word;
+    return words[0];
   }
 
   async getRandomWordId(): Promise<string> {
@@ -119,12 +157,7 @@ export class WordService extends BaseService<Word, WordDto> {
       .match({
         userId: BaseService.toObjectId(userId),
       })
-      .lookup({
-        from: 'votes',
-        localField: '_id',
-        foreignField: 'wordId',
-        as: 'votes',
-      })
+      .lookup(this.votesLookupOption)
       .unwind('$votes')
       .group({
         _id: null,

@@ -6,9 +6,14 @@ import { Word } from '../../word/models/word.model';
 import { BaseService } from '../base.service';
 import { Vote } from '../../vote/models/vote.model';
 import { Types } from 'mongoose';
+import { UserMapper } from './user.mapper';
 
 @Injectable()
 export class WordMapper extends BaseMapper<WordDto, Word> {
+  constructor(private readonly userMapper: UserMapper) {
+    super();
+  }
+
   public map(word: Word, userId?: Types.ObjectId): WordDto {
     const schema: StrictSchema<WordDto, Word> = {
       id: '_id',
@@ -18,6 +23,7 @@ export class WordMapper extends BaseMapper<WordDto, Word> {
       updatedAt: 'updatedAt',
       name: 'name',
       tags: 'tags',
+      user: (it) => this.userMapper.map(it.user),
       score: () => word.votes.reduce((score, vote: Vote) => score + (vote.value ? 1 : -1), 0),
     };
 

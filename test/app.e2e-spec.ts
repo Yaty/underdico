@@ -127,6 +127,8 @@ describe('AppController (e2e)', () => {
       expect(word.userUpVoted).toBeUndefined();
       expect(word.userDownVoted).toBeUndefined();
     }
+
+    expect(typeof word.user.id === 'string').toBeTruthy();
   }
 
   function checkUser(expectedUser, user: UserDto) {
@@ -290,6 +292,18 @@ describe('AppController (e2e)', () => {
       .then((res) => {
         checkWord(res.body);
         expect(res.body.id).toEqual(word.id);
+      });
+  });
+
+  it('/words/{wordId} (GET) with the owner', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+
+    await api.get('/api/words/' + word.id)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.user.id).toEqual(auth.userId);
       });
   });
 

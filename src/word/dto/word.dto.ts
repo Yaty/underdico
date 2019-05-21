@@ -1,5 +1,6 @@
 import { BaseModelDto } from '../../shared/base.model';
 import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
+import { UserDto } from '../../user/dto/user.dto';
 
 export class WordDto extends BaseModelDto {
   @ApiModelProperty()
@@ -25,4 +26,7 @@ export class WordDto extends BaseModelDto {
 
   @ApiModelPropertyOptional()
   readonly userVoteId?: string;
+
+  @ApiModelProperty()
+  readonly user: UserDto;
 }

@@ -34,6 +34,8 @@ export class Word extends BaseModel<Word> {
   })
   votes: Array<Ref<Vote>>;
 
+  user?: User;
+
   static get model(): ModelType<Word> {
     return new Word().getModelForClass(Word, { schemaOptions });
   }
