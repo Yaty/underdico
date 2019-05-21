@@ -282,6 +282,33 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/words (GET) with pagination', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    for (let i = 0; i < 6; i++) {
+      await createWord(auth.token);
+    }
+
+    const words = await getWords();
+
+    await api.get('/api/words?range=0-2')
+      .expect(200)
+      .then((res) => {
+        for (let i = 0; i < 3; i++) {
+          expect(res.body[i].id).toEqual(words[i].id);
+        }
+      });
+
+    await api.get('/api/words?range=3-5')
+      .expect(200)
+      .then((res) => {
+        for (let i = 3; i < 6; i++) {
+          expect(res.body[i - 3].id).toEqual(words[i].id);
+        }
+      });
+  });
+
   it('/words (GET) with vote information', async () => {
     const user = await createUser();
     const auth = await login(user);

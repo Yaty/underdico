@@ -83,7 +83,7 @@ export class WordController {
         throw new BadRequestException('Invalid range param');
       }
 
-      skip = startIndex - 1;
+      skip = startIndex;
 
       if (endIndex - startIndex + 1 > limit) {
         take = limit;

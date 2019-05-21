@@ -60,14 +60,14 @@ export class WordService extends BaseService<Word, WordDto> {
     ] = await Promise.all([
       this.wordModel
         .aggregate()
-        .limit(take)
-        .skip(skip)
-        .lookup(this.votesLookupOption)
-        .lookup(this.usersLookupOption)
-        .unwind('user')
         .sort({
           createdAt: 'descending',
         })
+        .skip(skip)
+        .limit(take)
+        .lookup(this.votesLookupOption)
+        .lookup(this.usersLookupOption)
+        .unwind('user')
         .exec(),
       this.count(),
     ]);
