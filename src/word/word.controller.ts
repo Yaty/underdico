@@ -55,10 +55,11 @@ export class WordController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiBadRequestResponse({ type: ApiException })
   @ApiResponse({ status: HttpStatus.OK, type: WordDto, isArray: true })
   @ApiOperation(GetOperationId(Word.modelName, 'FindAll'))
-  @ApiImplicitQuery({ name: 'range', description: '0-50, limit is 50 by page' })
+  @ApiImplicitQuery({ name: 'range', description: '0-50, limit is 50 by page', required: false })
   async findAll(
     @Request() req,
     @Response() res,
@@ -99,9 +100,8 @@ export class WordController {
     res.set('Content-Range', `${skip}-${skip + words.length}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
 
-    res.status(200).json(
-      this.wordService.mapper.mapArray(words, req.user && req.user._id),
-    );
+    const mappedWords = this.wordService.mapper.mapArray(words, req.user && req.user._id);
+    res.status(200).json(mappedWords);
   }
 
   @Get('random')

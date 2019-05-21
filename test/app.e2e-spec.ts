@@ -289,15 +289,21 @@ describe('AppController (e2e)', () => {
     const vote = await voteForAWord(auth.token, word.id, true);
 
     await api.get('/api/words')
+      .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
         expect(Array.isArray(res.body)).toBeTruthy();
 
+        let found = false;
+
         for (const w of res.body) {
           if (w.id === word.id) {
             expect(w.userVoteId).toEqual(vote.id);
+            found = true;
           }
         }
+
+        expect(found).toBeTruthy();
       });
   });
 

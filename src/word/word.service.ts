@@ -66,7 +66,7 @@ export class WordService extends BaseService<Word, WordDto> {
         .lookup(this.usersLookupOption)
         .unwind('user')
         .sort({
-          createdAt: 'ascending',
+          createdAt: 'descending',
         })
         .exec(),
       this.count(),
