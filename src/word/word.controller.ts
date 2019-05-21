@@ -6,6 +6,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiImplicitParam,
   ApiImplicitQuery,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -131,6 +132,7 @@ export class WordController {
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
   @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
   @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
   async findById(
     @Param('wordId') wordId,
@@ -146,6 +148,7 @@ export class WordController {
   @ApiCreatedResponse({ type: VoteDto })
   @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
   @ApiOperation(GetOperationId(Word.modelName, 'CreateVote'))
   async createVote(
     @Param() params: CreateVoteParamsDto,
@@ -162,6 +165,8 @@ export class WordController {
   @ApiOkResponse({ type: VoteDto })
   @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
+  @ApiImplicitParam({ name: 'voteId', required: true })
   @ApiOperation(GetOperationId(Word.modelName, 'UpdateVote'))
   async updateVote(
     @Param() params: UpdateVoteParamsDto,

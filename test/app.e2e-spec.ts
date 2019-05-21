@@ -282,6 +282,25 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/words (GET) with vote information', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    const vote = await voteForAWord(auth.token, word.id, true);
+
+    await api.get('/api/words')
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+
+        for (const w of res.body) {
+          if (w.id === word.id) {
+            expect(w.userVoteId).toEqual(vote.id);
+          }
+        }
+      });
+  });
+
   it('/words/{wordId} (GET)', async () => {
     const user = await createUser();
     const auth = await login(user);
@@ -311,7 +330,7 @@ describe('AppController (e2e)', () => {
     const user = await createUser();
     const auth = await login(user);
     const word = await createWord(auth.token);
-    await voteForAWord(auth.token, word.id, true);
+    const vote = await voteForAWord(auth.token, word.id, true);
 
     await api.get('/api/words/' + word.id)
       .set('Authorization', 'Bearer ' + auth.token)
@@ -320,6 +339,7 @@ describe('AppController (e2e)', () => {
         expect(res.body.score).toEqual(1);
         expect(res.body.userUpVoted).toBeTruthy();
         expect(res.body.userDownVoted).toBeFalsy();
+        expect(res.body.userVoteId).toEqual(vote.id);
       });
   });
 
@@ -327,7 +347,7 @@ describe('AppController (e2e)', () => {
     const user = await createUser();
     const auth = await login(user);
     const word = await createWord(auth.token);
-    await voteForAWord(auth.token, word.id, false);
+    const vote = await voteForAWord(auth.token, word.id, false);
 
     await api.get('/api/words/' + word.id)
       .set('Authorization', 'Bearer ' + auth.token)
@@ -336,6 +356,7 @@ describe('AppController (e2e)', () => {
         expect(res.body.score).toEqual(-1);
         expect(res.body.userUpVoted).toBeFalsy();
         expect(res.body.userDownVoted).toBeTruthy();
+        expect(res.body.userVoteId).toEqual(vote.id);
       });
   });
 

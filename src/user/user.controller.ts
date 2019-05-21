@@ -3,6 +3,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiImplicitParam,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -75,6 +76,7 @@ export class UserController {
   @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'FindById'))
+  @ApiImplicitParam({ name: 'userId', required: true })
   async findById(
     @Param() params: FindByIdParamsDto,
   ): Promise<UserDto> {
@@ -89,6 +91,7 @@ export class UserController {
   @ApiUnprocessableEntityResponse({ type: ApiException })
   @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(User.modelName, 'Update'))
+  @ApiImplicitParam({ name: 'userId', required: true })
   async update(
     @Param() params: UpdateParamsDto,
     @Body() dto: UpdateUserDto,
