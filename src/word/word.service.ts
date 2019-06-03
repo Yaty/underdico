@@ -78,6 +78,34 @@ export class WordService extends BaseService<Word, WordDto> {
     };
   }
 
+  async getAggregatedWordsWithFilter(take: number, where: object): Promise<{
+    words: Word[],
+    count: number,
+  }> {
+    const [
+      words,
+      count,
+    ] = await Promise.all([
+      this.wordModel
+        .aggregate()
+        .match(where)
+        .limit(take)
+        .sort({
+          createdAt: 'descending',
+        })
+        .lookup(this.votesLookupOption)
+        .lookup(this.usersLookupOption)
+        .unwind('user')
+        .exec(),
+      this.count(),
+    ]);
+
+    return {
+      words,
+      count,
+    };
+  }
+
   async findWordById(id: string): Promise<Word> {
     const words = await this.wordModel
       .aggregate()

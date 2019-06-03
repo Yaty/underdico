@@ -328,6 +328,23 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/words (GET) with filter', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word1 = await createWord(auth.token);
+    await createWord(auth.token);
+
+    return api.get('/api/words?where=' + JSON.stringify({
+      name: word1.name,
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body.length).toEqual(1);
+        expect(res.body[0].name).toEqual(word1.name);
+      });
+  });
+
   it('/words (GET) with pagination', async () => {
     const user = await createUser();
     const auth = await login(user);

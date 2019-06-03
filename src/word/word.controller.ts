@@ -91,6 +91,7 @@ export class WordController {
     @Request() req,
     @Response() res,
     @Query('range') range,
+    @Query('where') where,
   ): Promise<void> {
     const limit = 50;
 
@@ -119,10 +120,24 @@ export class WordController {
       }
     }
 
-    const {
-      words,
-      count,
-    } = await this.wordService.getAggregatedWords(skip, take);
+    let serviceResponse;
+    let words;
+    let count;
+
+    if (where) {
+      try {
+        where = JSON.parse(where);
+      } catch (err) {
+        throw new BadRequestException('Invalid where JSON format');
+      }
+
+      serviceResponse = await this.wordService.getAggregatedWordsWithFilter(take, where);
+    } else {
+      serviceResponse = await this.wordService.getAggregatedWords(skip, take);
+    }
+
+    words = serviceResponse.words;
+    count = serviceResponse.count;
 
     res.set('Content-Range', `${skip}-${skip + words.length - 1}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
