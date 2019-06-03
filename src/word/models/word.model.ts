@@ -34,6 +34,11 @@ export class Word extends BaseModel<Word> {
   })
   votes: Array<Ref<Vote>>;
 
+  @prop({
+    default: 'fr',
+  })
+  locale: string;
+
   user?: User;
 
   static get model(): ModelType<Word> {

@@ -9,6 +9,11 @@ const config: Config = {
   JWT_ALGORITHM: 'HS256',
   JWT_EXPIRATION: '1h',
   JWT_ISSUER: 'underdico.com',
+  GOOGLE_CLOUD_STORAGE_BUCKET: 'underdico',
+  GOOGLE_CLOUD_PROJECT_ID: 'underdico',
+  GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL: '205455575954-compute@developer.gserviceaccount.com',
+  // tslint:disable-next-line:max-line-length
+  GOOGLE_CLOUD_STORAGE_PRIVATE_KEY: process.env.GOOGLE_CLOUD_STORAGE_PRIVATE_KEY,
 };
 
 export default config;

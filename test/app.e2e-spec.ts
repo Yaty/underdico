@@ -10,6 +10,8 @@ import { WordDto } from '../src/word/dto/word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
 import { UserDto } from '../src/user/dto/user.dto';
 import { configure } from '../src/app.configuration';
+import * as request from 'request-promise-native';
+import * as fs from 'fs';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -108,6 +110,17 @@ describe('AppController (e2e)', () => {
     });
   }
 
+  async function uploadAudio(token: string, wordId: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      api.put('/api/words/' + wordId + '/audio')
+        .set('Authorization', 'Bearer ' + token)
+        .attach('file', './test/audio.mp3')
+        .expect(204)
+        .then(() => resolve(wordId))
+        .catch(reject);
+    });
+  }
+
   function checkWord(word: WordDto, userId?: string) {
     expect(word).toHaveProperty('createdAt');
     expect(word).toHaveProperty('updatedAt');
@@ -139,6 +152,7 @@ describe('AppController (e2e)', () => {
     expect(user).toHaveProperty('id');
     expect(user).toHaveProperty('createdAt');
     expect(user).toHaveProperty('updatedAt');
+    expect(user).toHaveProperty('locale');
   }
 
   it('/ (GET)', () => {
@@ -170,6 +184,7 @@ describe('AppController (e2e)', () => {
       username: uuid() + uuid(),
       password: 444,
       email: uuid(),
+      locale: 'fff',
     };
 
     return api.post('/api/users')
@@ -182,10 +197,12 @@ describe('AppController (e2e)', () => {
         expect(Array.isArray(res.body.errors)).toBeTruthy();
         expect(res.body.errors[0].property).toEqual('email');
         expect(res.body.errors[0].constraints.isEmail).toBeTruthy();
-        expect(res.body.errors[1].property).toEqual('username');
-        expect(res.body.errors[1].constraints.length).toBeTruthy();
-        expect(res.body.errors[2].property).toEqual('password');
+        expect(res.body.errors[1].property).toEqual('locale');
+        expect(res.body.errors[1].constraints.customValidation).toEqual('The locale must respect ISO-639-1 standard');
+        expect(res.body.errors[2].property).toEqual('username');
         expect(res.body.errors[2].constraints.length).toBeTruthy();
+        expect(res.body.errors[3].property).toEqual('password');
+        expect(res.body.errors[3].constraints.length).toBeTruthy();
       });
   });
 
@@ -267,6 +284,35 @@ describe('AppController (e2e)', () => {
       .expect(201)
       .then((res) => {
         checkWord(res.body, auth.userId);
+      });
+  });
+
+  it('/words (POST) with validation', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    const word: CreateWordDto = {
+      name: uuid(),
+      definition: uuid().repeat(100),
+      // @ts-ignore
+      tags: 123,
+      locale: 'fffff',
+    };
+
+    await api.post('/api/words')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send(word)
+      .expect(422)
+      .then((res) => {
+        expect(res.body.errors[0].property).toEqual('name');
+        expect(res.body.errors[0].constraints).toHaveProperty('isAlphanumeric');
+        expect(res.body.errors[1].property).toEqual('definition');
+        expect(res.body.errors[1].constraints).toHaveProperty('length');
+        expect(res.body.errors[2].property).toEqual('tags');
+        expect(res.body.errors[2].constraints).toHaveProperty('arrayUnique');
+        expect(res.body.errors[2].constraints).toHaveProperty('isArray');
+        expect(res.body.errors[3].property).toEqual('locale');
+        expect(res.body.errors[3].constraints).toHaveProperty('customValidation');
       });
   });
 
@@ -456,5 +502,42 @@ describe('AppController (e2e)', () => {
         expect(res.body.value).toBeFalsy();
         expect(res.body.userId).toEqual(auth.userId);
       });
+  });
+
+  it('/words/{wordId}/audio (PUT)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+
+    await api.put('/api/words/' + word.id + '/audio')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .attach('file', './test/audio.mp3')
+      .expect(204);
+  });
+
+  it('/words/{wordId}/audio (GET)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    await uploadAudio(auth.token, word.id);
+
+    await api.get('/api/words/' + word.id + '/audio')
+      .expect(302)
+      .then((res) => request.get(res.header.location))
+      .then((body) => {
+        const originalFile = fs.readFileSync('./test/audio.mp3').toString();
+        expect(body).toEqual(originalFile);
+      });
+  });
+
+  it('/words/{wordId}/audio (DELETE)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+    await uploadAudio(auth.token, word.id);
+
+    await api.delete('/api/words/' + word.id + '/audio')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
   });
 });

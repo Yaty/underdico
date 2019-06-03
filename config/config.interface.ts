@@ -6,4 +6,8 @@ export interface Config {
   JWT_ALGORITHM: string;
   JWT_EXPIRATION: string;
   JWT_ISSUER: string;
+  GOOGLE_CLOUD_PROJECT_ID: string;
+  GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL: string;
+  GOOGLE_CLOUD_STORAGE_PRIVATE_KEY: string;
+  GOOGLE_CLOUD_STORAGE_BUCKET: string;
 }

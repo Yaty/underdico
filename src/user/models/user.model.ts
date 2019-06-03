@@ -27,6 +27,11 @@ export class User extends BaseModel<User> {
   })
   role?: UserRole;
 
+  @prop({
+    default: 'fr',
+  })
+  locale: string;
+
   karma?: number;
 
   static get model(): ModelType<User> {

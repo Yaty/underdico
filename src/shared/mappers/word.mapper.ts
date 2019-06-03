@@ -23,6 +23,7 @@ export class WordMapper extends BaseMapper<WordDto, Word> {
       updatedAt: 'updatedAt',
       name: 'name',
       tags: 'tags',
+      locale: 'locale',
       user: (it) => this.userMapper.map(it.user),
       score: () => word.votes.reduce((score, vote: Vote) => score + (vote.value ? 1 : -1), 0),
     };

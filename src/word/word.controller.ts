@@ -1,13 +1,34 @@
-import { BadRequestException, Body, Controller, Get, HttpStatus, Param, Patch, Post, Query, Request, Response, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Request,
+  Response,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { WordService } from './word.service';
 import { WordDto } from './dto/word.dto';
 import { Word } from './models/word.model';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConsumes,
   ApiCreatedResponse,
+  ApiImplicitFile,
   ApiImplicitParam,
   ApiImplicitQuery,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -28,6 +49,11 @@ import { CreateVoteParamsDto } from './dto/create-vote-params.dto';
 import { UpdateVoteParamsDto } from './dto/update-vote-params.dto';
 import { VoteMapper } from '../shared/mappers/vote.mapper';
 import { OptionalJwtAuthGuard } from '../shared/guards/optional-jwt-auth.guard';
+import { UploadAudioParams } from './dto/upload-audio-params.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { DownloadAudioParams } from './dto/download-audio-params.dto';
+import { StorageService } from '../shared/storage/storage.service';
+import { DeleteAudioParams } from './dto/delete-audio-params.dto';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -36,6 +62,7 @@ export class WordController {
   constructor(
     private readonly wordService: WordService,
     private readonly voteMapper: VoteMapper,
+    private readonly storageService: StorageService,
   ) {}
 
   @Post()
@@ -175,5 +202,73 @@ export class WordController {
   ): Promise<VoteDto> {
     const vote = await this.wordService.updateVote(params.wordId, params.voteId, dto.value, req.user);
     return this.voteMapper.map(vote);
+  }
+
+  @Put(':wordId/audio')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiBadRequestResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
+  @ApiOperation(GetOperationId(Word.modelName, 'UploadWordAudio'))
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiImplicitFile({ name: 'file', required: true })
+  async uploadAudio(
+    @Param() params: UploadAudioParams,
+    @Request() req,
+    @Response() res,
+    @UploadedFile() file,
+  ): Promise<void> {
+    if (file.mimetype !== 'audio/mpeg') {
+      throw new BadRequestException('Invalid mimetype, only audio/mpeg is allowed');
+    }
+
+    const word = await this.wordService.findWordById(params.wordId);
+
+    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(req.user._id)) {
+      throw new ForbiddenException();
+    }
+
+    await this.storageService.upload(file, 'audio/mpeg', WordService.objectIdToString(word._id));
+    res.sendStatus(204);
+  }
+
+  @Get(':wordId/audio')
+  @ApiOkResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(Word.modelName, 'DownloadWordAudio'))
+  async downloadAudio(
+    @Param() params: DownloadAudioParams,
+    @Response() res,
+  ): Promise<void> {
+    const word = await this.wordService.findWordById(params.wordId);
+    res.redirect(this.storageService.getFileUrl(WordService.objectIdToString(word._id)));
+  }
+
+  @Delete(':wordId/audio')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(Word.modelName, 'DeleteWordAudio'))
+  async deleteAudio(
+    @Param() params: DeleteAudioParams,
+    @Request() req,
+    @Response() res,
+  ) {
+    const word = await this.wordService.findWordById(params.wordId);
+
+    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(req.user._id)) {
+      throw new ForbiddenException();
+    }
+
+    await this.storageService.delete(WordService.objectIdToString(word._id));
+    res.sendStatus(204);
   }
 }

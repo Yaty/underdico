@@ -24,6 +24,7 @@
     "deploy": "npm run tag && npm run push && npm run set-image"
   },
   "dependencies": {
+    "@google-cloud/storage": "^2.5.0",
     "@nestjs/common": "^6.0.4",
     "@nestjs/core": "^6.0.4",
     "@nestjs/jwt": "^6.0.0",
@@ -35,15 +36,16 @@
     "class-transformer": "^0.2.2",
     "class-validator": "^0.9.1",
     "config": "^3.1.0",
+    "iso-639-1": "^2.0.5",
     "mongoose": "^5.5.0",
     "morphism": "^1.11.1",
     "passport": "^0.4.0",
     "passport-jwt": "^4.0.0",
     "pjson": "^1.0.9",
     "reflect-metadata": "0.1.13",
+    "rxjs": "^6.5.2",
     "swagger-ui-express": "^4.0.2",
-    "typegoose": "^5.6.0",
-    "rxjs": "^6.5.2"
+    "typegoose": "^5.6.0"
   },
   "devDependencies": {
     "@nestjs/testing": "6.0.5",
@@ -57,6 +59,8 @@
     "@types/uuid": "^3.4.4",
     "jest": "24.8.0",
     "nodemon": "1.18.11",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
     "rimraf": "^2.6.3",
     "sinon": "^7.3.2",
     "supertest": "4.0.2",

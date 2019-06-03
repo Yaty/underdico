@@ -1,17 +1,27 @@
-import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
+import { ApiModelProperty } from '@nestjs/swagger';
 import { UserRole } from '../models/user-role.enum';
 import { BaseModelDto } from '../../shared/base.model';
+import { IsEmail, IsInt, IsString } from 'class-validator';
+import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class UserDto extends BaseModelDto {
   @ApiModelProperty()
+  @IsString()
   readonly username: string;
 
   @ApiModelProperty()
+  @IsEmail()
   readonly email: string;
 
-  @ApiModelPropertyOptional()
+  @ApiModelProperty()
+  @IsIso6391()
+  readonly locale: string;
+
+  @ApiModelProperty()
+  @IsInt()
   readonly karma?: number;
 
-  @ApiModelPropertyOptional({ enum: UserRole })
+  @ApiModelProperty({ enum: UserRole })
+  @IsString()
   readonly role?: UserRole;
 }
