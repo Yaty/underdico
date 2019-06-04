@@ -54,6 +54,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { DownloadAudioParams } from './dto/download-audio-params.dto';
 import { StorageService } from '../shared/storage/storage.service';
 import { DeleteAudioParams } from './dto/delete-audio-params.dto';
+import { UpdateWordDto } from './dto/update-word.dto';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -183,6 +184,23 @@ export class WordController {
   ): Promise<WordDto> {
     const word = await this.wordService.findWordById(wordId);
     return this.wordService.mapper.map(word, req.user && req.user._id);
+  }
+
+  @Patch(':wordId')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiResponse({ status: HttpStatus.OK, type: WordDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'wordId', required: true })
+  @ApiOperation(GetOperationId(Word.modelName, 'UpdateById'))
+  async updateById(
+    @Param('wordId') wordId,
+    @Body() dto: UpdateWordDto,
+    @Request() req,
+  ): Promise<WordDto> {
+    const word = await this.wordService.updateWord(wordId, dto, req.user._id);
+    return this.wordService.mapper.map(word, req.user._id);
   }
 
   @Post(':wordId/votes')

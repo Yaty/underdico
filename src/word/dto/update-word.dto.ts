@@ -1,0 +1,30 @@
+import { ApiModelPropertyOptional } from '@nestjs/swagger';
+import { ArrayUnique, IsArray, IsOptional, IsString, Length } from 'class-validator';
+import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
+
+export class UpdateWordDto {
+  @ApiModelPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  readonly name?: string;
+
+  @ApiModelPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(1, 2048)
+  readonly definition?: string;
+
+  @ApiModelPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({each: true})
+  readonly tags?: string[];
+
+  @ApiModelPropertyOptional()
+  @IsIso6391({
+    optional: true,
+  })
+  readonly locale?: string;
+}

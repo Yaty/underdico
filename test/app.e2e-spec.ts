@@ -132,14 +132,18 @@ describe('AppController (e2e)', () => {
     });
   }
 
-  function checkWord(word: WordDto, userId?: string) {
+  function checkWord(expectedWord, word: WordDto, userId?: string) {
     expect(word).toHaveProperty('createdAt');
     expect(word).toHaveProperty('updatedAt');
     expect(word).toHaveProperty('id');
     expect(word).toHaveProperty('locale');
-    expect(word.name).toEqual(word.name);
-    expect(word.definition).toEqual(word.definition);
-    expect(word.tags[0]).toEqual(word.tags[0]);
+
+    if (expectedWord) {
+      expect(word.name).toEqual(expectedWord.name);
+      expect(word.definition).toEqual(expectedWord.definition);
+      expect(word.tags[0]).toEqual(expectedWord.tags[0]);
+    }
+
     expect(typeof word.score === 'number').toBeTruthy();
     expect(word.userVoteId).toBeUndefined();
 
@@ -332,7 +336,7 @@ describe('AppController (e2e)', () => {
       .send(word)
       .expect(201)
       .then((res) => {
-        checkWord(res.body, auth.userId);
+        checkWord(word, res.body, auth.userId);
       });
   });
 
@@ -370,7 +374,7 @@ describe('AppController (e2e)', () => {
         expect(Array.isArray(res.body)).toBeTruthy();
 
         for (const w of res.body) {
-          checkWord(w);
+          checkWord(null, w);
         }
       });
   });
@@ -452,7 +456,7 @@ describe('AppController (e2e)', () => {
     await api.get('/api/words/' + word.id)
       .expect(200)
       .then((res) => {
-        checkWord(res.body);
+        checkWord(word, res.body);
         expect(res.body.id).toEqual(word.id);
       });
   });
@@ -500,6 +504,25 @@ describe('AppController (e2e)', () => {
         expect(res.body.userUpVoted).toBeFalsy();
         expect(res.body.userDownVoted).toBeTruthy();
         expect(res.body.userVoteId).toEqual(vote.id);
+      });
+  });
+
+  it('/words/{wordId} (PATCH)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    const word = await createWord(auth.token);
+
+    await api.patch('/api/words/' + word.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send({
+        name: 'new name',
+      })
+      .expect(200)
+      .then((res) => {
+        checkWord({
+          ...word,
+          name: 'new name',
+        }, res.body, auth.userId);
       });
   });
 

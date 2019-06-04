@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Word } from './models/word.model';
 import { WordDto } from './dto/word.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,6 +9,7 @@ import { User } from '../user/models/user.model';
 import { WordMapper } from '../shared/mappers/word.mapper';
 import { Vote } from '../vote/models/vote.model';
 import { VoteService } from '../vote/vote.service';
+import { UpdateWordDto } from './dto/update-word.dto';
 
 @Injectable()
 export class WordService extends BaseService<Word, WordDto> {
@@ -48,6 +49,20 @@ export class WordService extends BaseService<Word, WordDto> {
       user: owner,
       ...result.toJSON(),
     };
+  }
+
+  async updateWord(wordId: string, dto: UpdateWordDto, user: User): Promise<Word> {
+    const word = await this.findWordById(wordId);
+
+    if (BaseService.objectIdToString(word.userId) !== BaseService.objectIdToString(user._id)) {
+      throw new ForbiddenException('You do not own this word');
+    }
+
+    await this.wordModel.updateOne({
+      _id: wordId,
+    }, dto).exec();
+
+    return this.findWordById(wordId);
   }
 
   async getAggregatedWords(skip: number, take: number): Promise<{
