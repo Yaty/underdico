@@ -1,9 +1,30 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpException,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Request,
+  Response,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiConsumes,
   ApiCreatedResponse,
+  ApiImplicitFile,
   ApiImplicitParam,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -25,11 +46,19 @@ import { UserRole } from './models/user-role.enum';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../shared/guards/roles.guard';
 import { FindByIdParamsDto } from './dto/find-by-id-params.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { StorageService } from '../shared/storage/storage.service';
+import { UploadAvatarParams } from './dto/upload-avatar-params.dto';
+import { DownloadAvatarParams } from './dto/download-avatar-params.dto';
+import { DeleteAvatarParams } from './dto/delete-avatar-params.dto';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly storageService: StorageService,
+  ) {}
 
   @Post()
   @ApiCreatedResponse({ type: UserDto })
@@ -99,5 +128,73 @@ export class UserController {
   ): Promise<UserDto> {
     const user = await this.userService.updateUser(params.userId, dto, req.user);
     return this.userService.mapper.map(user);
+  }
+
+  @Put(':userId/avatar')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiBadRequestResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'userId', required: true })
+  @ApiOperation(GetOperationId(User.modelName, 'UploadAvatar'))
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiImplicitFile({ name: 'file', required: true })
+  async uploadAvatar(
+    @Param() params: UploadAvatarParams,
+    @Request() req,
+    @Response() res,
+    @UploadedFile() file,
+  ): Promise<void> {
+    if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png') {
+      throw new BadRequestException('Invalid mimetype, only image/jpeg and image/png is allowed');
+    }
+
+    const user = await this.userService.findUserById(params.userId);
+
+    if (UserService.objectIdToString(user._id) !== UserService.objectIdToString(req.user._id)) {
+      throw new ForbiddenException();
+    }
+
+    await this.storageService.upload(file, file.mimetype, UserService.objectIdToString(user._id));
+    res.sendStatus(204);
+  }
+
+  @Get(':userId/avatar')
+  @ApiOkResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiImplicitParam({ name: 'userId', required: true })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(User.modelName, 'DownloadAvatar'))
+  async downloadAvatar(
+    @Param() params: DownloadAvatarParams,
+    @Response() res,
+  ): Promise<void> {
+    const user = await this.userService.findUserById(params.userId);
+    res.redirect(this.storageService.getFileUrl(UserService.objectIdToString(user._id)));
+  }
+
+  @Delete(':userId/avatar')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(User.modelName, 'DeleteAvatar'))
+  async deleteAvatar(
+    @Param() params: DeleteAvatarParams,
+    @Request() req,
+    @Response() res,
+  ) {
+    const user = await this.userService.findUserById(params.userId);
+
+    if (UserService.objectIdToString(user._id) !== UserService.objectIdToString(req.user._id)) {
+      throw new ForbiddenException();
+    }
+
+    await this.storageService.delete(UserService.objectIdToString(user._id));
+    res.sendStatus(204);
   }
 }

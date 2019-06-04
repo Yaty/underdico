@@ -110,13 +110,24 @@ describe('AppController (e2e)', () => {
     });
   }
 
-  async function uploadAudio(token: string, wordId: string): Promise<string> {
+  function uploadAudio(token: string, wordId: string): Promise<string> {
     return new Promise((resolve, reject) => {
       api.put('/api/words/' + wordId + '/audio')
         .set('Authorization', 'Bearer ' + token)
         .attach('file', './test/audio.mp3')
         .expect(204)
         .then(() => resolve(wordId))
+        .catch(reject);
+    });
+  }
+
+  function uploadAvatar(token: string, userId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      api.put('/api/users/' + userId + '/avatar')
+        .set('Authorization', 'Bearer ' + token)
+        .attach('file', './test/avatar.png')
+        .expect(204)
+        .then(() => resolve())
         .catch(reject);
     });
   }
@@ -234,6 +245,40 @@ describe('AppController (e2e)', () => {
       .then((res) => {
         expect(res.body.karma).toEqual(2);
       });
+  });
+
+  it('/users/{userId}/avatar (PUT)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+
+    await api.put('/api/users/' + auth.userId + '/avatar')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .attach('file', './test/avatar.png')
+      .expect(204);
+  });
+
+  it('/users/{userId}/avatar (GET)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    await uploadAvatar(auth.token, auth.userId);
+
+    await api.get('/api/users/' + auth.userId + '/avatar')
+      .expect(302)
+      .then((res) => request.get(res.header.location))
+      .then((body) => {
+        const originalFile = fs.readFileSync('./test/avatar.png').toString();
+        expect(body).toEqual(originalFile);
+      });
+  });
+
+  it('/users/{userId}/avatar (DELETE)', async () => {
+    const user = await createUser();
+    const auth = await login(user);
+    await uploadAvatar(auth.token, auth.userId);
+
+    await api.delete('/api/users/' + auth.userId + '/avatar')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
   });
 
   it('/users/{userId} (PATCH)', async () => {
