@@ -55,6 +55,7 @@ import { DownloadAudioParams } from './dto/download-audio-params.dto';
 import { StorageService } from '../shared/storage/storage.service';
 import { DeleteAudioParams } from './dto/delete-audio-params.dto';
 import { UpdateWordDto } from './dto/update-word.dto';
+import { Pagination } from '../shared/decorators/pagination.decorator';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -92,36 +93,10 @@ export class WordController {
   async findAll(
     @Request() req,
     @Response() res,
-    @Query('range') range,
+    @Pagination() range,
     @Query('where') where,
   ): Promise<void> {
-    const limit = 50;
-
-    let skip = 0;
-    let take = limit;
-
-    if (range) {
-      const rangeParams = range.split('-').map(Number);
-
-      if (rangeParams.length !== 2) {
-        throw new BadRequestException('Invalid range param');
-      }
-
-      const [startIndex, endIndex] = rangeParams;
-
-      if (endIndex < startIndex) {
-        throw new BadRequestException('Invalid range param');
-      }
-
-      skip = startIndex;
-
-      if (endIndex - startIndex + 1 > limit) {
-        take = limit;
-      } else {
-        take = endIndex - startIndex + 1;
-      }
-    }
-
+    const [skip, take, limit] = range;
     let serviceResponse;
     let words;
     let count;
