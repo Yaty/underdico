@@ -87,6 +87,7 @@ export class WordController {
   @ApiResponse({ status: HttpStatus.OK, type: WordDto, isArray: true })
   @ApiOperation(GetOperationId(Word.modelName, 'FindAll'))
   @ApiImplicitQuery({ name: 'range', description: '0-50, limit is 50 by page', required: false })
+  @ApiImplicitQuery({ name: 'where', description: 'where filter', required: false })
   async findAll(
     @Request() req,
     @Response() res,
