@@ -8,6 +8,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigurationService } from './shared/configuration/configuration.service';
 import { Configuration } from './shared/configuration/configuration.enum';
 import { VoteModule } from './vote/vote.module';
+import { EventModule } from './event/event.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { VoteModule } from './vote/vote.module';
     UserModule,
     VoteModule,
     WordModule,
+    EventModule,
   ],
   controllers: [AppController],
   providers: [AppService],

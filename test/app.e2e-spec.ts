@@ -136,6 +136,7 @@ describe('AppController (e2e)', () => {
     expect(word).toHaveProperty('createdAt');
     expect(word).toHaveProperty('updatedAt');
     expect(word).toHaveProperty('id');
+    expect(word).toHaveProperty('locale');
     expect(word.name).toEqual(word.name);
     expect(word.definition).toEqual(word.definition);
     expect(word.tags[0]).toEqual(word.tags[0]);
@@ -287,12 +288,15 @@ describe('AppController (e2e)', () => {
 
     await api.patch('/api/users/' + auth.userId)
       .set('Authorization', 'Bearer ' + auth.token)
-      .expect(200)
       .send({
         email: 'new@email.fr',
       })
+      .expect(200)
       .then((res) => {
-        expect(res.body.email).toEqual('new@email.fr');
+        checkUser({
+          ...user,
+          email: 'new@email.fr',
+        }, res.body);
       });
   });
 
@@ -349,15 +353,13 @@ describe('AppController (e2e)', () => {
       .send(word)
       .expect(422)
       .then((res) => {
-        expect(res.body.errors[0].property).toEqual('name');
-        expect(res.body.errors[0].constraints).toHaveProperty('isAlphanumeric');
-        expect(res.body.errors[1].property).toEqual('definition');
-        expect(res.body.errors[1].constraints).toHaveProperty('length');
-        expect(res.body.errors[2].property).toEqual('tags');
-        expect(res.body.errors[2].constraints).toHaveProperty('arrayUnique');
-        expect(res.body.errors[2].constraints).toHaveProperty('isArray');
-        expect(res.body.errors[3].property).toEqual('locale');
-        expect(res.body.errors[3].constraints).toHaveProperty('customValidation');
+        expect(res.body.errors[0].property).toEqual('definition');
+        expect(res.body.errors[0].constraints).toHaveProperty('length');
+        expect(res.body.errors[1].property).toEqual('tags');
+        expect(res.body.errors[1].constraints).toHaveProperty('arrayUnique');
+        expect(res.body.errors[1].constraints).toHaveProperty('isArray');
+        expect(res.body.errors[2].property).toEqual('locale');
+        expect(res.body.errors[2].constraints).toHaveProperty('customValidation');
       });
   });
 

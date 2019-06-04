@@ -6,7 +6,7 @@ export class User extends BaseModel<User> {
   @prop({
     required: [true, 'Username is required'],
     unique: true,
-    minlength: [3, 'Must be at least 6 characters'],
+    minlength: [3, 'Must be at least 3 characters'],
   })
   username: string;
 

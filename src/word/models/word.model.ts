@@ -28,7 +28,6 @@ export class Word extends BaseModel<Word> {
   tags: string[];
 
   @arrayProp({
-    required: [true, 'votes is required'],
     default: [],
     itemsRef: Vote,
   })

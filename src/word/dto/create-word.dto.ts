@@ -1,11 +1,10 @@
 import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsAlphanumeric, IsArray, IsOptional, IsString, Length } from 'class-validator';
+import { ArrayUnique, IsArray, IsOptional, IsString, Length } from 'class-validator';
 import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class CreateWordDto {
   @ApiModelProperty()
   @IsString()
-  @IsAlphanumeric()
   @Length(1, 64)
   readonly name: string;
 

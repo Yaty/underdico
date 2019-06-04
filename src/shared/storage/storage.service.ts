@@ -2,6 +2,7 @@ import { Storage } from '@google-cloud/storage';
 
 import { Injectable } from '@nestjs/common';
 import { ConfigurationService } from '../configuration/configuration.service';
+import { Configuration } from '../configuration/configuration.enum';
 
 @Injectable()
 export class StorageService {
@@ -11,13 +12,13 @@ export class StorageService {
   constructor(
     private readonly configurationService: ConfigurationService,
   ) {
-    this.bucketName = configurationService.get('GOOGLE_CLOUD_STORAGE_BUCKET');
+    this.bucketName = configurationService.get(Configuration.GOOGLE_CLOUD_STORAGE_BUCKET);
 
     this.storage = new Storage({
-      projectId: configurationService.get('GOOGLE_CLOUD_PROJECT_ID'),
+      projectId: configurationService.get(Configuration.GOOGLE_CLOUD_PROJECT_ID),
       credentials: {
-        client_email: configurationService.get('GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL'),
-        private_key: configurationService.get('GOOGLE_CLOUD_STORAGE_PRIVATE_KEY'),
+        client_email: configurationService.get(Configuration.GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL),
+        private_key: configurationService.get(Configuration.GOOGLE_CLOUD_STORAGE_PRIVATE_KEY),
       },
     });
   }
