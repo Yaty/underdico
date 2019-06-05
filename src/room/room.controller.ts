@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiUseTags } from '@nestjs/swagger';
 import { RoomService } from './room.service';
 import { Room } from './models/room.model';
@@ -6,6 +6,10 @@ import { RoomDto } from './dto/room.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { Pagination } from '../shared/decorators/pagination.decorator';
 import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
+import { Roles } from '../shared/decorators/roles.decorator';
+import { UserRole } from '../user/models/user-role.enum';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../shared/guards/roles.guard';
 
 @Controller('rooms')
 @ApiUseTags(Room.modelName)
@@ -21,7 +25,7 @@ export class RoomController {
   async getRooms(
     @Pagination() range,
     @Res() res,
-  ): Promise<RoomDto[]> {
+  ): Promise<void> {
     const { skip, take, limit } = range;
 
     const {
@@ -32,10 +36,12 @@ export class RoomController {
     res.set('Content-Range', `${skip}-${skip + rooms.length - 1}/${count}`);
     res.set('Accept-Range', `${Room.modelName} ${limit}`);
 
-    return this.roomService.mapper.mapArray(rooms);
+    res.json(this.roomService.mapper.mapArray(rooms));
   }
 
   @Post()
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @ApiCreatedResponse({ type: RoomDto })
   @ApiOperation(GetOperationId(Room.modelName, 'CreateRoom'))
   async createRoom(

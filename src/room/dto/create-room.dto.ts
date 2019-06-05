@@ -1,9 +1,8 @@
 import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
-import { BaseModelDto } from '../../shared/base.model';
 import { IsBoolean, IsInt, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
 import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
-export class CreateRoomDto extends BaseModelDto {
+export class CreateRoomDto {
   @ApiModelProperty()
   @IsString()
   @MinLength(3)

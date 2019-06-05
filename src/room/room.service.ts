@@ -36,7 +36,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
         .skip(skip)
         .limit(take)
         .exec(),
-      this.roomModel.count(match),
+      this.roomModel.countDocuments(match),
     ]);
 
     return {
@@ -45,15 +45,11 @@ export class RoomService extends BaseService<Room, RoomDto> {
     };
   }
 
-  async createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
-    const room = Room.createModel();
-
-    Object.apply(room, {
+  createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
+    return this.roomModel.create({
       ...dto,
+      playersIds: [owner._id],
       ownerId: owner._id,
     });
-
-    const savedRoom = await room.save();
-    return savedRoom.toJSON();
   }
 }

@@ -5,14 +5,14 @@ import { AppModule } from '../src/app.module';
 import { INestApplication } from '@nestjs/common';
 import { WordDto } from '../src/word/dto/word.dto';
 import { configure } from '../src/app.configuration';
-import utilsFactory from './utils';
+import TestUtils from './utils';
 import * as request from 'request-promise-native';
 import * as fs from 'fs';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 
 describe('WordController (e2e)', () => {
   let app: INestApplication;
-  let utils;
+  let utils: TestUtils;
   let api;
 
   beforeAll(async () => {
@@ -24,7 +24,7 @@ describe('WordController (e2e)', () => {
     configure(app);
     await app.init();
     api = supertest(app.getHttpServer());
-    utils = utilsFactory(api);
+    utils = new TestUtils(api);
   });
 
   afterAll(async () => {

@@ -6,13 +6,13 @@ import { INestApplication } from '@nestjs/common';
 import { RegisterDto } from '../src/user/dto/register.dto';
 import { UserDto } from '../src/user/dto/user.dto';
 import { configure } from '../src/app.configuration';
-import utilsFactory from './utils';
+import TestUtils from './utils';
 import * as request from 'request-promise-native';
 import * as fs from 'fs';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
-  let utils;
+  let utils: TestUtils;
   let api;
 
   beforeAll(async () => {
@@ -24,7 +24,7 @@ describe('UserController (e2e)', () => {
     configure(app);
     await app.init();
     api = supertest(app.getHttpServer());
-    utils = utilsFactory(api);
+    utils = new TestUtils(api);
   });
 
   afterAll(async () => {
@@ -41,15 +41,6 @@ describe('UserController (e2e)', () => {
     expect(user).toHaveProperty('updatedAt');
     expect(user).toHaveProperty('locale');
   }
-
-  it('/ (GET)', () => {
-    return api.get('/api')
-      .expect(200)
-      .then((res) => {
-        expect(res.body).toHaveProperty('startedAt');
-        expect(res.body).toHaveProperty('uptime');
-      });
-  });
 
   it('/users (POST)', () => {
     const user: RegisterDto = {
