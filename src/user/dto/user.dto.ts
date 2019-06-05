@@ -21,7 +21,9 @@ export class UserDto extends BaseModelDto {
   @IsInt()
   readonly karma?: number;
 
-  @ApiModelProperty({ enum: UserRole })
+  @ApiModelProperty({
+    enum: UserRole,
+  })
   @IsString()
   readonly role?: UserRole;
 }

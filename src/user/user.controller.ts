@@ -19,6 +19,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiConsumes,
   ApiCreatedResponse,
@@ -54,6 +55,7 @@ import { DeleteAvatarParams } from './dto/delete-avatar-params.dto';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
+@ApiBearerAuth()
 export class UserController {
   constructor(
     private readonly userService: UserService,

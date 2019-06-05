@@ -1,6 +1,8 @@
-import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
+import { ApiModelProperty } from '@nestjs/swagger';
 import { BaseModelDto } from '../../shared/base.model';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsPositive, IsString, MinLength } from 'class-validator';
+import { RoomStatus } from '../models/room-status.enum';
+import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class RoomDto extends BaseModelDto {
   @ApiModelProperty()
@@ -8,24 +10,34 @@ export class RoomDto extends BaseModelDto {
   @MinLength(3)
   readonly name: string;
 
-  @ApiModelPropertyOptional()
-  @IsOptional()
+  @ApiModelProperty()
   @IsInt()
   @IsPositive()
   readonly maxPlayers: number;
 
-  @ApiModelPropertyOptional()
-  @IsOptional()
+  @ApiModelProperty()
   @IsBoolean()
   readonly isPrivate: boolean;
 
-  @ApiModelPropertyOptional()
-  @IsOptional()
+  @ApiModelProperty()
+  @IsBoolean()
+  readonly isRanked: boolean;
+
+  @ApiModelProperty({
+    enum: RoomStatus,
+  })
+  @IsEnum(RoomStatus)
+  readonly status: RoomStatus;
+
+  @ApiModelProperty()
   @IsArray()
   readonly playersIds: string[];
 
-  @ApiModelPropertyOptional()
-  @IsOptional()
+  @ApiModelProperty()
   @IsString()
   readonly ownerId: string;
+
+  @ApiModelProperty()
+  @IsIso6391()
+  readonly locale: string;
 }

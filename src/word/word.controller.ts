@@ -96,7 +96,7 @@ export class WordController {
     @Pagination() range,
     @Query('where') where,
   ): Promise<void> {
-    const [skip, take, limit] = range;
+    const { skip, take, limit } = range;
     let serviceResponse;
     let words;
     let count;

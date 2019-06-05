@@ -1,6 +1,7 @@
 import { arrayProp, InstanceType, ModelType, prop, Ref } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { User } from '../../user/models/user.model';
+import { RoomStatus } from './room-status.enum';
 
 export class Room extends BaseModel<Room> {
   @prop({
@@ -19,6 +20,17 @@ export class Room extends BaseModel<Room> {
   })
   isPrivate: boolean;
 
+  @prop({
+    default: false,
+  })
+  isRanked: boolean;
+
+  @prop({
+    enum: RoomStatus,
+    default: RoomStatus.Created,
+  })
+  status: RoomStatus;
+
   @arrayProp({
     default: [],
     itemsRef: User,
@@ -27,6 +39,7 @@ export class Room extends BaseModel<Room> {
 
   @arrayProp({
     default: [],
+    items: String,
   })
   tags: string[];
 
@@ -35,6 +48,11 @@ export class Room extends BaseModel<Room> {
     ref: User,
   })
   ownerId: Ref<User>;
+
+  @prop({
+    default: 'fr',
+  })
+  locale: string;
 
   static get model(): ModelType<Room> {
     return new Room().getModelForClass(Room, {

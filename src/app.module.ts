@@ -9,6 +9,7 @@ import { ConfigurationService } from './shared/configuration/configuration.servi
 import { Configuration } from './shared/configuration/configuration.enum';
 import { VoteModule } from './vote/vote.module';
 import { EventModule } from './event/event.module';
+import { RoomModule } from './room/room.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { EventModule } from './event/event.module';
     UserModule,
     VoteModule,
     WordModule,
+    RoomModule,
     EventModule,
   ],
   controllers: [AppController],

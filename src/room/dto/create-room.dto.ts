@@ -1,6 +1,7 @@
 import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
 import { BaseModelDto } from '../../shared/base.model';
 import { IsBoolean, IsInt, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class CreateRoomDto extends BaseModelDto {
   @ApiModelProperty()
@@ -12,10 +13,21 @@ export class CreateRoomDto extends BaseModelDto {
   @IsOptional()
   @IsInt()
   @IsPositive()
-  readonly maxPlayers: number;
+  readonly maxPlayers?: number;
 
   @ApiModelPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  readonly isPrivate: boolean;
+  readonly isPrivate?: boolean;
+
+  @ApiModelPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  readonly isRanked?: boolean;
+
+  @ApiModelPropertyOptional()
+  @IsIso6391({
+    optional: true,
+  })
+  readonly locale?: string;
 }

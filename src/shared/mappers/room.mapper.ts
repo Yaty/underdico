@@ -16,6 +16,9 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       maxPlayers: 'maxPlayers',
       ownerId: 'ownerId',
       playersIds: 'playersIds',
+      isRanked: 'isRanked',
+      status: 'status',
+      locale: 'locale',
     });
   }
 

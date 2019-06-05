@@ -4,6 +4,7 @@ import { RoomController } from './room.controller';
 import { RoomService } from './room.service';
 import { WordModule } from '../word/word.module';
 import { Room } from './models/room.model';
+import { RoomMapper } from '../shared/mappers/room.mapper';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { Room } from './models/room.model';
     }]),
     WordModule,
   ],
-  providers: [RoomService],
+  providers: [RoomService, RoomMapper],
   controllers: [RoomController],
   exports: [],
 })

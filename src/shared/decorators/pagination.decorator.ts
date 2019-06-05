@@ -1,6 +1,10 @@
 import { BadRequestException, createParamDecorator } from '@nestjs/common';
 
-export const Pagination = createParamDecorator((data, req) => {
+export const Pagination = createParamDecorator((data: any, req): {
+  skip: number,
+  take: number,
+  limit: number,
+} => {
   const range = req.query.range;
   const limit = 50;
 
@@ -29,5 +33,9 @@ export const Pagination = createParamDecorator((data, req) => {
     }
   }
 
-  return [skip, take, limit];
+  return {
+    skip,
+    take,
+    limit,
+  };
 });
