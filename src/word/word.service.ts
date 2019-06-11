@@ -42,6 +42,7 @@ export class WordService extends BaseService<Word, WordDto> {
     newWord.definition = word.definition;
     newWord.tags = word.tags;
     newWord.userId = owner._id;
+    newWord.locale = word.locale;
 
     const result = await this.create(newWord);
 
@@ -139,11 +140,15 @@ export class WordService extends BaseService<Word, WordDto> {
     return words[0];
   }
 
-  async getRandomWordId(): Promise<string> {
+  async getRandomWord(): Promise<Word> {
     const count = await this.count();
     const random = Math.floor(Math.random() * count);
-    const word = await this.wordModel.findOne().skip(random).lean().exec();
-    return word._id;
+    return this.wordModel.findOne().skip(random).lean().exec();
+  }
+
+  async getRandomWordId(): Promise<string> {
+    const word = await this.getRandomWord();
+    return BaseService.objectIdToString(word._id);
   }
 
   getDailyWordId(): Promise<string> {

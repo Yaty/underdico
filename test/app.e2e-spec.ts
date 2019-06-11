@@ -23,12 +23,12 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('/ (GET)', () => {
-    return api.get('/api')
+  it('/ (GET)', () =>
+    api.get('/api')
       .expect(200)
       .then((res) => {
         expect(res.body).toHaveProperty('startedAt');
         expect(res.body).toHaveProperty('uptime');
-      });
-  });
+      }),
+  );
 });

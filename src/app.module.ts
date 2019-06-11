@@ -10,6 +10,7 @@ import { Configuration } from './shared/configuration/configuration.enum';
 import { VoteModule } from './vote/vote.module';
 import { EventModule } from './event/event.module';
 import { RoomModule } from './room/room.module';
+import { RedisModule } from 'nestjs-redis';
 
 @Module({
   imports: [
@@ -26,11 +27,21 @@ import { RoomModule } from './room/room.module';
       }),
       inject: [ConfigurationService],
     }),
+    RedisModule.forRootAsync({
+      useFactory: (configService: ConfigurationService) => ({
+        host: configService.get(Configuration.REDIS_HOST),
+        port: Number(configService.get(Configuration.REDIS_PORT)),
+        db: Number(configService.get(Configuration.REDIS_DB)),
+        password: configService.get(Configuration.REDIS_PASSWORD),
+        keyPrefix: configService.get(Configuration.REDIS_PREFIX),
+      }),
+      inject: [ConfigurationService],
+    }),
     UserModule,
     VoteModule,
     WordModule,
-    RoomModule,
     EventModule,
+    RoomModule,
   ],
   controllers: [AppController],
   providers: [AppService],

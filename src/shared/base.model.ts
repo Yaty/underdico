@@ -1,28 +1,28 @@
-import { ApiModelPropertyOptional } from '@nestjs/swagger';
+import { ApiModelProperty } from '@nestjs/swagger';
 import { SchemaOptions, Types } from 'mongoose';
 import { prop, Typegoose } from 'typegoose';
 
 export class BaseModelDto {
-  @ApiModelPropertyOptional({ type: String, format: 'date-time' })
-  createdAt?: Date;
+  @ApiModelProperty({ type: String, format: 'date-time' })
+  createdAt: Date;
 
-  @ApiModelPropertyOptional({ type: String, format: 'date-time' })
-  updatedAt?: Date;
+  @ApiModelProperty({ type: String, format: 'date-time' })
+  updatedAt: Date;
 
-  @ApiModelPropertyOptional() id?: string;
+  @ApiModelProperty() id?: string;
 }
 
 // tslint:disable-next-line:max-classes-per-file
 export abstract class BaseModel<T> extends Typegoose {
   @prop()
-  @ApiModelPropertyOptional({ type: String, format: 'date-time' })
+  @ApiModelProperty({ type: String, format: 'date-time' })
   createdAt: Date;
 
   @prop()
-  @ApiModelPropertyOptional({ type: String, format: 'date-time' })
+  @ApiModelProperty({ type: String, format: 'date-time' })
   updatedAt: Date;
 
-  @ApiModelPropertyOptional()
+  @ApiModelProperty()
   '_id': Types.ObjectId;
 }
 

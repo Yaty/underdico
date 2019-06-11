@@ -19,6 +19,11 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       isRanked: 'isRanked',
       status: 'status',
       locale: 'locale',
+      currentPlayer: 'currentPlayer',
+      currentWord: 'currentWord',
+      enteredAt: 'enteredAt',
+      leavedAt: 'leavedAt',
+      words: 'words',
     });
   }
 
@@ -27,6 +32,6 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
   }
 
   public mapArray(input: Room[]): RoomDto[] {
-    return input.map(this.map);
+    return input.map((i) => this.map(i));
   }
 }

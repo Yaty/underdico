@@ -39,7 +39,12 @@ describe('UserController (e2e)', () => {
     expect(user).toHaveProperty('id');
     expect(user).toHaveProperty('createdAt');
     expect(user).toHaveProperty('updatedAt');
-    expect(user).toHaveProperty('locale');
+
+    if (expectedUser.locale) {
+      expect(user.locale).toEqual(expectedUser.locale);
+    } else {
+      expect(user).toHaveProperty('locale');
+    }
   }
 
   it('/users (POST)', () => {
@@ -47,6 +52,7 @@ describe('UserController (e2e)', () => {
       username: uuid().substr(0, 10),
       password: uuid().substr(0, 10),
       email: `${uuid()}@${uuid()}.fr`,
+      locale: 'en',
     };
 
     return api.post('/api/users')
@@ -156,12 +162,14 @@ describe('UserController (e2e)', () => {
       .set('Authorization', 'Bearer ' + auth.token)
       .send({
         email: 'new@email.fr',
+        locale: 'de',
       })
       .expect(200)
       .then((res) => {
         checkUser({
           ...user,
           email: 'new@email.fr',
+          locale: 'de',
         }, res.body);
       });
   });

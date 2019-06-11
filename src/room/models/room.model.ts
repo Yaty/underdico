@@ -2,6 +2,7 @@ import { arrayProp, InstanceType, ModelType, prop, Ref } from 'typegoose';
 import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { User } from '../../user/models/user.model';
 import { RoomStatus } from './room-status.enum';
+import { Word } from '../../word/models/word.model';
 
 export class Room extends BaseModel<Room> {
   @prop({
@@ -44,10 +45,38 @@ export class Room extends BaseModel<Room> {
   tags: string[];
 
   @prop({
+    required: false,
+  })
+  enteredAt: Date;
+
+  @prop({
+    required: false,
+  })
+  leavedAt: Date;
+
+  @prop({
     required: [true, 'owner is required'],
     ref: User,
   })
   ownerId: Ref<User>;
+
+  @prop({
+    required: false,
+    ref: Word,
+  })
+  currentWord: Ref<Word>;
+
+  @arrayProp({
+    default: [],
+    itemsRef: Word,
+  })
+  words: Array<Ref<Word>>;
+
+  @prop({
+    required: false,
+    ref: User,
+  })
+  currentPlayer: Ref<User>;
 
   @prop({
     default: 'fr',

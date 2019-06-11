@@ -4,6 +4,7 @@ import { TokenResponseDto } from '../src/user/dto/token-response.dto';
 import { WordDto } from '../src/word/dto/word.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
+import { CreateRoomDto } from '../src/room/dto/create-room.dto';
 
 export default class TestUtils {
   constructor(private readonly api) {}
@@ -104,6 +105,23 @@ export default class TestUtils {
         .attach('file', './test/audio.mp3')
         .expect(204)
         .then(() => resolve(wordId))
+        .catch(reject);
+    });
+  }
+
+  createRoom(token: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const room: CreateRoomDto = {
+        name: uuid(),
+      };
+
+      this.api.post('/api/rooms')
+        .set('Authorization', 'Bearer ' + token)
+        .send(room)
+        .expect(201)
+        .then((res) => {
+          resolve(res.body.id);
+        })
         .catch(reject);
     });
   }

@@ -10,4 +10,9 @@ export interface Config {
   GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL: string;
   GOOGLE_CLOUD_STORAGE_PRIVATE_KEY: string;
   GOOGLE_CLOUD_STORAGE_BUCKET: string;
+  REDIS_HOST: string;
+  REDIS_PORT: string;
+  REDIS_DB: string;
+  REDIS_PASSWORD: string;
+  REDIS_PREFIX: string;
 }

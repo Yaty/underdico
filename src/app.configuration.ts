@@ -4,6 +4,7 @@ import * as packageJson from 'pjson';
 import { ValidationPipe } from '@nestjs/common';
 import { CustomValidationError } from './shared/errors/custom-validation.error';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
+import { RedisIoAdapter } from './shared/adapters/redis-io.adapter';
 
 export function configure(app) {
   const hostDomain = AppModule.isDev ? `${AppModule.host}:${AppModule.port}` : AppModule.host;
@@ -38,4 +39,6 @@ export function configure(app) {
   }));
 
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useWebSocketAdapter(new RedisIoAdapter());
+  app.enableCors();
 }

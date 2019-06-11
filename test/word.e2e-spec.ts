@@ -35,12 +35,15 @@ describe('WordController (e2e)', () => {
     expect(word).toHaveProperty('createdAt');
     expect(word).toHaveProperty('updatedAt');
     expect(word).toHaveProperty('id');
-    expect(word).toHaveProperty('locale');
 
     if (expectedWord) {
       expect(word.name).toEqual(expectedWord.name);
       expect(word.definition).toEqual(expectedWord.definition);
       expect(word.tags[0]).toEqual(expectedWord.tags[0]);
+
+      if (expectedWord.locale) {
+        expect(word.locale).toEqual(expectedWord.locale);
+      }
     }
 
     expect(typeof word.score === 'number').toBeTruthy();
@@ -57,6 +60,7 @@ describe('WordController (e2e)', () => {
     }
 
     expect(typeof word.user.id === 'string').toBeTruthy();
+    expect(word).toHaveProperty('locale');
   }
 
   it('/words (POST)', async () => {
@@ -67,6 +71,7 @@ describe('WordController (e2e)', () => {
       name: uuid().substr(0, 6),
       definition: uuid(),
       tags: [uuid()],
+      locale: 'en',
     };
 
     await api.post('/api/words')
@@ -254,12 +259,14 @@ describe('WordController (e2e)', () => {
       .set('Authorization', 'Bearer ' + auth.token)
       .send({
         name: 'new name',
+        locale: 'en',
       })
       .expect(200)
       .then((res) => {
         checkWord({
           ...word,
           name: 'new name',
+          locale: 'en',
         }, res.body, auth.userId);
       });
   });

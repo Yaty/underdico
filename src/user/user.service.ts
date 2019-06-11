@@ -1,4 +1,4 @@
-import { ForbiddenException, forwardRef, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
@@ -19,8 +19,8 @@ export class UserService extends BaseService<User, UserDto> {
   constructor(
     @InjectModel(User.modelName) private readonly userModel: ModelType<User>,
     mapper: UserMapper,
-    @Inject(forwardRef(() => AuthService)) readonly authService: AuthService,
-    @Inject(forwardRef(() => WordService)) readonly wordService: WordService,
+    readonly authService: AuthService,
+    readonly wordService: WordService,
   ) {
     super(userModel, mapper);
   }
@@ -70,6 +70,7 @@ export class UserService extends BaseService<User, UserDto> {
     newUser.username = username.trim().toLowerCase();
     newUser.password = await this.hashPassword(password);
     newUser.email = email.trim();
+    newUser.locale = dto.locale;
 
     const user = await this.userModel.create(newUser);
     return user.toJSON();

@@ -14,6 +14,11 @@ const config: Config = {
   GOOGLE_CLOUD_STORAGE_CLIENT_EMAIL: '205455575954-compute@developer.gserviceaccount.com',
   // tslint:disable-next-line:max-line-length
   GOOGLE_CLOUD_STORAGE_PRIVATE_KEY: process.env.GOOGLE_CLOUD_STORAGE_PRIVATE_KEY,
+  REDIS_DB: '1',
+  REDIS_HOST: 'localhost',
+  REDIS_PASSWORD: '',
+  REDIS_PORT: '6379',
+  REDIS_PREFIX: 'underdico',
 };
 
 export default config;
