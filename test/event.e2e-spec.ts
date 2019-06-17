@@ -7,12 +7,14 @@ import * as supertest from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import * as pEvent from 'p-event';
 import { RoomService } from '../src/room/room.service';
+import { WordService } from '../src/word/word.service';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('Event (E2E)', () => {
   let app: INestApplication;
   let roomService: RoomService;
+  let wordService: WordService;
   let utils: TestUtils;
   let api;
 
@@ -25,6 +27,7 @@ describe('Event (E2E)', () => {
     configure(app);
     await app.init();
     roomService = moduleFixture.get<RoomService>(RoomService);
+    wordService = moduleFixture.get<WordService>(WordService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -81,7 +84,6 @@ describe('Event (E2E)', () => {
 
     ownerSocketIOClient.emit('startRoom', {
       roomId,
-      token: ownerAuth.token,
     });
 
     await pEvent(player1SocketIOClient, 'roomStarted');
@@ -92,14 +94,21 @@ describe('Event (E2E)', () => {
     ]);
 
     // @ts-ignore
-    const playerSocket = ownerAuth.userId === newRound.nextPlayerId ? ownerSocketIOClient : player1SocketIOClient;
+    const player = ownerAuth.userId === newRound.nextPlayerId ? {
+      socket: ownerSocketIOClient,
+      userId: ownerAuth.userId,
+    } : {
+      socket: player1SocketIOClient,
+      userId: player1Auth.userId,
+    };
 
     const room = await roomService.findById(roomId);
-    const goodWord = room.wordsIds[room.wordsIds.length - 1];
+    const goodWordId = room.rounds[room.rounds.length - 1].wordId as unknown as string;
+    const goodWordName = (await wordService.findWordById(goodWordId)).name;
 
-    playerSocket.emit('play', {
+    player.socket.emit('play', {
       roomId,
-      proposal: goodWord,
+      proposal: goodWordName,
     });
 
     const [play] = await Promise.all([
@@ -108,6 +117,6 @@ describe('Event (E2E)', () => {
     ]);
 
     // @ts-ignore
-    expect(play.playerId).toEqual(player);
+    expect(play.playerId).toEqual(player.userId);
   }, 60000);
 });

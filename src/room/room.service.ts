@@ -62,7 +62,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
   async addPlayer(dto: JoinRoomDto): Promise<boolean> {
     const room = await this.roomModel.findByIdAndUpdate(dto.roomId, {
-      $push: {
+      $addToSet: {
         playersIds: dto.user._id,
       },
     }, {
@@ -139,7 +139,6 @@ export class RoomService extends BaseService<Room, RoomDto> {
   async checkProposal(dto: PlayDto, player: User): Promise<boolean> {
     const room = await this.roomModel
       .findById(dto.roomId)
-      .populate('rounds.word')
       .lean()
       .exec();
 
@@ -147,21 +146,27 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('Room not found');
     }
 
-    if (BaseService.objectIdToString(room.currentPlayer) !== BaseService.objectIdToString(player._id)) {
+    const round = room.rounds[room.rounds.length - 1];
+
+    if (BaseService.objectIdToString(round.currentPlayerId) !== BaseService.objectIdToString(player._id)) {
       throw new WsException('This is not your turn to play');
     }
 
-    const currentWord = (room.rounds[room.rounds.length - 1]).name.toLowerCase();
+    const currentWord = await this.wordService.findWordById(round.wordId);
+    const currentWordName = currentWord.name.toLowerCase();
     const proposal = dto.proposal.toLowerCase();
-    const proposalResultIsCorrect = currentWord === proposal;
+    const proposalResultIsCorrect = currentWordName === proposal;
 
     if (proposalResultIsCorrect) {
       await this.roomModel.updateOne({
-        _id: dto.roomId,
+        '_id': dto.roomId,
+        'rounds._id': round._id,
       }, {
-        winnerId: player._id,
-        terminatedAt: new Date(),
-        currentPlayerId: null,
+        $set: {
+          'rounds.$.winnerId': player._id,
+          'rounds.$.terminatedAt': new Date(),
+          'rounds.$.currentPlayerId': null,
+        },
       }).exec();
     }
 
