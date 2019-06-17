@@ -4,6 +4,63 @@ import { User } from '../../user/models/user.model';
 import { RoomStatus } from './room-status.enum';
 import { Word } from '../../word/models/word.model';
 
+class Round {
+  @prop({
+    required: false,
+    ref: Word,
+  })
+  wordId: Ref<Word>;
+
+  @prop({
+    ref: Word,
+    localField: 'wordId',
+    foreignField: '_id',
+    justOne: true,
+  })
+  get word() {
+    return undefined;
+  }
+
+  @prop({
+    required: false,
+    ref: User,
+  })
+  winnerId: Ref<User>;
+
+  @prop({
+    ref: User,
+    localField: 'winnerId',
+    foreignField: '_id',
+    justOne: true,
+  })
+  get winner() {
+    return undefined;
+  }
+
+  @prop({
+    required: false,
+    ref: User,
+  })
+  currentPlayerId: Ref<User>;
+
+  @prop({
+    ref: User,
+    localField: 'currentPlayerId',
+    foreignField: '_id',
+    justOne: true,
+  })
+  get currentPlayer() {
+    return undefined;
+  }
+
+  @prop()
+  createdAt: Date;
+
+  @prop()
+  terminatedAt: Date;
+}
+
+// tslint:disable-next-line:max-classes-per-file
 export class Room extends BaseModel<Room> {
   @prop({
     required: [true, 'name is required'],
@@ -45,43 +102,31 @@ export class Room extends BaseModel<Room> {
   tags: string[];
 
   @prop({
-    required: false,
-  })
-  enteredAt: Date;
-
-  @prop({
-    required: false,
-  })
-  leavedAt: Date;
-
-  @prop({
     required: [true, 'owner is required'],
     ref: User,
   })
   ownerId: Ref<User>;
 
   @prop({
-    required: false,
-    ref: Word,
-  })
-  currentWord: Ref<Word>;
-
-  @arrayProp({
-    default: [],
-    itemsRef: Word,
-  })
-  words: Array<Ref<Word>>;
-
-  @prop({
-    required: false,
     ref: User,
+    localField: 'ownerId',
+    foreignField: '_id',
+    justOne: true,
   })
-  currentPlayer: Ref<User>;
+  get owner() {
+    return undefined;
+  }
 
   @prop({
     default: 'fr',
   })
   locale: string;
+
+  @arrayProp({
+    default: [],
+    items: Round,
+  })
+  rounds: Round[];
 
   static get model(): ModelType<Room> {
     return new Room().getModelForClass(Room, {

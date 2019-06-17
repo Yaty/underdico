@@ -9,6 +9,8 @@ import { RoomService } from '../room/room.service';
 import { PlayDto } from './dto/play.dto';
 import { Word } from '../word/models/word.model';
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 @WebSocketGateway()
 export class EventGateway {
   constructor(
@@ -53,25 +55,36 @@ export class EventGateway {
 
     if (roomStarted) {
       this.server.to(dto.roomId).emit('roomStarted');
+      await wait(1000); // let some time for every players to prepare UI
       await this.roomService.startNextRound(dto.roomId);
     }
   }
 
   @UseGuards(WsJwtGuard)
-  @SubscribeMessage('propose')
+  @SubscribeMessage('play')
   async play(socket: Socket, dto: PlayDto): Promise<void> {
     const isCorrectProposal = await this.roomService.checkProposal(dto, dto.user);
-    const event = isCorrectProposal ? 'goodProposal' : 'wrongProposal';
 
-    this.server.to(dto.roomId).emit(event, {
-      player: dto.user._id,
-      nextPlayer: await this.roomService.getNextPlayerId(dto),
-    });
+    if (isCorrectProposal) {
+      this.server.to(dto.roomId).emit('goodProposal', {
+        playerId: dto.user._id,
+      });
+
+      await this.roomService.startNextRound(dto.roomId);
+    } else {
+      this.server.to(dto.roomId).emit('wrongProposal', {
+        playerId: dto.user._id,
+        nextPlayerId: await this.roomService.getNextPlayerId(dto),
+      });
+    }
+
   }
 
-  startNextRound(roomId: string, word: Word): void {
+  // FIXME: Use events here to decouple from RoomService
+  startNextRound(roomId: string, word: Word, nextPlayerId: string): void {
     this.server.to(roomId).emit('newRound', {
       definition: word.definition,
+      nextPlayerId,
     });
   }
 

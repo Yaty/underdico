@@ -13,6 +13,5 @@ export interface Config {
   REDIS_HOST: string;
   REDIS_PORT: string;
   REDIS_DB: string;
-  REDIS_PASSWORD: string;
   REDIS_PREFIX: string;
 }

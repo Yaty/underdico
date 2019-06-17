@@ -13,7 +13,6 @@ import { LeaveRoomDto } from '../event/dto/leave-room.dto';
 import { StartRoomDto } from '../event/dto/start-room.dto';
 import { PlayDto } from '../event/dto/play.dto';
 import { WsException } from '@nestjs/websockets';
-import { Word } from '../word/models/word.model';
 import { EventGateway } from '../event/event.gateway';
 import { WordService } from '../word/word.service';
 
@@ -66,7 +65,6 @@ export class RoomService extends BaseService<Room, RoomDto> {
       $push: {
         playersIds: dto.user._id,
       },
-      enteredAt: new Date(),
     }, {
       new: true,
     }).lean().exec();
@@ -83,7 +81,6 @@ export class RoomService extends BaseService<Room, RoomDto> {
       $pull: {
         playersIds: dto.user._id,
       },
-      leavedAt: new Date(),
     }, {
       new: true,
     }).lean().exec();
@@ -110,23 +107,39 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async startNextRound(roomId: string): Promise<void> {
-    const word = await this.wordService.getRandomWord();
+    const room = await this.roomModel.findById(roomId).lean().exec();
 
-    await this.roomModel.findByIdAndUpdate(roomId, {
-      currentWord: word._id,
-      currentPlayer: null,
+    if (!room) {
+      throw new WsException('Room not found');
+    }
+
+    const word = await this.wordService.getRandomWord(room.locale);
+
+    if (!word) {
+      throw new WsException('No word');
+    }
+
+    const nextPlayerId = room.playersIds[Math.round(Math.random() * room.playersIds.length)];
+
+    await this.roomModel.updateOne({
+      _id: roomId,
+    }, {
       $push: {
-        words: word._id,
+        rounds: {
+          wordId: word._id,
+          currentPlayerId: nextPlayerId,
+          createdAt: new Date(),
+        },
       },
-    }).lean().exec();
+    }).exec();
 
-    await this.eventGateway.startNextRound(roomId, word);
+    await this.eventGateway.startNextRound(roomId, word, RoomService.objectIdToString(nextPlayerId));
   }
 
   async checkProposal(dto: PlayDto, player: User): Promise<boolean> {
     const room = await this.roomModel
       .findById(dto.roomId)
-      .populate('currentWord')
+      .populate('rounds.word')
       .lean()
       .exec();
 
@@ -138,15 +151,21 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('This is not your turn to play');
     }
 
-    const currentWord = (room.currentWord as Word).name.toLowerCase();
+    const currentWord = (room.rounds[room.rounds.length - 1]).name.toLowerCase();
     const proposal = dto.proposal.toLowerCase();
-    const wordFound = currentWord === proposal;
+    const proposalResultIsCorrect = currentWord === proposal;
 
-    if (wordFound) {
-      await this.startNextRound(dto.roomId);
+    if (proposalResultIsCorrect) {
+      await this.roomModel.updateOne({
+        _id: dto.roomId,
+      }, {
+        winnerId: player._id,
+        terminatedAt: new Date(),
+        currentPlayerId: null,
+      }).exec();
     }
 
-    return wordFound;
+    return proposalResultIsCorrect;
   }
 
   async getNextPlayerId(dto: PlayDto): Promise<string> {
@@ -159,7 +178,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('Room not found');
     }
 
-    const currentPlayerIndex = room.playersIds.findIndex(room.currentPlayer);
+    const currentPlayerIndex = room.playersIds.findIndex(room.rounds[room.rounds.length - 1].currentPlayerId);
     return room.playersIds[currentPlayerIndex + 1 % room.playersIds.length];
   }
 }

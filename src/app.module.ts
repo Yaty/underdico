@@ -32,7 +32,6 @@ import { RedisModule } from 'nestjs-redis';
         host: configService.get(Configuration.REDIS_HOST),
         port: Number(configService.get(Configuration.REDIS_PORT)),
         db: Number(configService.get(Configuration.REDIS_DB)),
-        password: configService.get(Configuration.REDIS_PASSWORD),
         keyPrefix: configService.get(Configuration.REDIS_PREFIX),
       }),
       inject: [ConfigurationService],

@@ -42,12 +42,13 @@ export default class TestUtils {
     });
   }
 
-  createWord(token: string): Promise<WordDto> {
+  createWord(token: string, locale?: string): Promise<WordDto> {
     return new Promise((resolve, reject) => {
       const word: CreateWordDto = {
         name: uuid().substr(0, 6),
         definition: uuid(),
         tags: [uuid()],
+        locale,
       };
 
       this.api.post('/api/words')
@@ -87,9 +88,15 @@ export default class TestUtils {
     });
   }
 
-  getWords(): Promise<WordDto[]> {
+  getWords(locale?: string): Promise<WordDto[]> {
     return new Promise((resolve, reject) => {
-      this.api.get('/api/words')
+      let url = '/api/words';
+
+      if (locale) {
+        url += '?where={"locale": "' + locale + '"}';
+      }
+
+      this.api.get(url)
         .expect(200)
         .then((res) => {
           resolve(res.body);

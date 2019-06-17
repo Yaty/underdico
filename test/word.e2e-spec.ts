@@ -61,6 +61,7 @@ describe('WordController (e2e)', () => {
 
     expect(typeof word.user.id === 'string').toBeTruthy();
     expect(word).toHaveProperty('locale');
+    expect(word).toHaveProperty('score');
   }
 
   it('/words (POST)', async () => {
@@ -139,6 +140,26 @@ describe('WordController (e2e)', () => {
       });
   });
 
+  it('/words (GET) with sort on score', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word1 = await utils.createWord(auth.token);
+    await utils.createWord(auth.token);
+    await utils.voteForAWord(auth.token, word1.id, true);
+
+    return api.get('/api/words?sort=score,desc')
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        let previous = res.body[0].score;
+
+        for (const w of res.body) {
+          expect(w.score).toBeLessThanOrEqual(previous);
+          previous = w.score;
+        }
+      });
+  });
+
   it('/words (GET) with pagination', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
@@ -172,6 +193,10 @@ describe('WordController (e2e)', () => {
     const word = await utils.createWord(auth.token);
     const vote = await utils.voteForAWord(auth.token, word.id, true);
 
+    const u2 = await utils.createUser();
+    const a2 = await utils.login(u2);
+    await utils.voteForAWord(a2.token, word.id, true);
+
     await api.get('/api/words')
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
@@ -183,11 +208,39 @@ describe('WordController (e2e)', () => {
         for (const w of res.body) {
           if (w.id === word.id) {
             expect(w.userVoteId).toEqual(vote.id);
+            expect(w.score).toEqual(2);
             found = true;
           }
         }
 
         expect(found).toBeTruthy();
+      });
+  });
+
+  it('/words (GET) with sort on votes and where on locale', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word1 = await utils.createWord(auth.token, 'en');
+    const word2 = await utils.createWord(auth.token, 'en');
+    const word3 = await utils.createWord(auth.token, 'fr');
+    await utils.voteForAWord(auth.token, word1.id, true);
+
+    await api.get('/api/words?sort=score,desc&where={"locale": "en"}')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+
+        const w1Index = res.body.indexOf((w) => w.id === word1.id);
+        const w2Index = res.body.indexOf((w) => w.id === word2.id);
+
+        expect(w1Index).toBeGreaterThanOrEqual(0);
+        expect(w2Index).toBeGreaterThanOrEqual(1);
+        expect(w2Index).toBeGreaterThan(w1Index);
+
+        for (const w of res.body) {
+          expect(w.id === word3.id).toBeFalsy();
+        }
       });
   });
 
@@ -216,17 +269,21 @@ describe('WordController (e2e)', () => {
       });
   });
 
-  it('/words/{wordId} (GET) with an upvote', async () => {
+  it('/words/{wordId} (GET) with upvotes', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
     const word = await utils.createWord(auth.token);
     const vote = await utils.voteForAWord(auth.token, word.id, true);
 
+    const u2 = await utils.createUser();
+    const a2 = await utils.login(u2);
+    await utils.voteForAWord(a2.token, word.id, true);
+
     await api.get('/api/words/' + word.id)
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
-        expect(res.body.score).toEqual(1);
+        expect(res.body.score).toEqual(2);
         expect(res.body.userUpVoted).toBeTruthy();
         expect(res.body.userDownVoted).toBeFalsy();
         expect(res.body.userVoteId).toEqual(vote.id);
@@ -279,6 +336,22 @@ describe('WordController (e2e)', () => {
       });
   });
 
+  it('/words/random (GET) with locale', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    await utils.createWord(auth.token, 'en');
+
+    await api.get('/api/words/random?locale=en')
+      .expect(302)
+      .then((res) => {
+        expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
+        return api.get('/api/words/' + res.header.location.split('/').pop()).expect(200);
+      })
+      .then((res) => {
+        expect(res.body.locale).toEqual('en');
+      });
+  });
+
   it('/words/daily (GET)', async () => {
     const words = await utils.getWords();
     const bestWordScore = words.length > 0 ? Math.max(...words.map((w) => w.score)) : 0;
@@ -296,6 +369,30 @@ describe('WordController (e2e)', () => {
       .expect(302)
       .then((res) => {
         expect(res.header.location).toMatch(new RegExp('http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWord.id));
+      });
+  });
+
+  it('/words/daily (GET) with locale', async () => {
+    const locale = 'lt';
+    const words = await utils.getWords(locale);
+    const bestWordScore = words.length > 0 ? Math.max(...words.map((w) => w.score)) : 0;
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const bestWordInCorrectLocale = await utils.createWord(auth.token, locale);
+    const bestWorldInAnotherLocale = await utils.createWord(auth.token, 'pt');
+
+    await utils.createWord(auth.token, locale); // populate with random word
+    await utils.voteForAWord(auth.token, bestWorldInAnotherLocale.id, true);
+
+    for (let i = 0; i < bestWordScore + 1; i++) {
+      await utils.voteForAWord(auth.token, bestWordInCorrectLocale.id, true);
+      await utils.voteForAWord(auth.token, bestWorldInAnotherLocale.id, true);
+    }
+
+    await api.get('/api/words/daily?locale=' + locale)
+      .expect(302)
+      .then((res) => {
+        expect(res.header.location).toMatch(new RegExp('http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWordInCorrectLocale.id));
       });
   });
 

@@ -90,16 +90,24 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'FindAll'))
   @ApiImplicitQuery({ name: 'range', description: '0-50, limit is 50 by page', required: false })
   @ApiImplicitQuery({ name: 'where', description: 'where filter', required: false })
+  @ApiImplicitQuery({ name: 'sort', description: 'sort filter', required: false })
   async findAll(
     @Request() req,
     @Response() res,
-    @Pagination() range,
-    @Query('where') where,
+    @Pagination() range?,
+    @Query('where') where?,
+    @Query('sort') sort?,
   ): Promise<void> {
     const { skip, take, limit } = range;
-    let serviceResponse;
-    let words;
-    let count;
+
+    if (sort) {
+      const [field, ordering] = sort.split(',');
+
+      sort = {
+        field,
+        ordering,
+      };
+    }
 
     if (where) {
       try {
@@ -107,14 +115,12 @@ export class WordController {
       } catch (err) {
         throw new BadRequestException('Invalid where JSON format');
       }
-
-      serviceResponse = await this.wordService.getAggregatedWordsWithFilter(take, where);
-    } else {
-      serviceResponse = await this.wordService.getAggregatedWords(skip, take);
     }
 
-    words = serviceResponse.words;
-    count = serviceResponse.count;
+    const {
+      words,
+      count,
+    } = await this.wordService.getAggregatedWords(skip, take, where, sort);
 
     res.set('Content-Range', `${skip}-${skip + words.length - 1}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
@@ -126,11 +132,13 @@ export class WordController {
   @Get('random')
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
   @ApiOperation(GetOperationId(Word.modelName, 'Random'))
+  @ApiImplicitQuery({ name: 'locale', required: false })
   async random(
     @Request() req,
     @Response() res,
+    @Query('locale') locale?: string,
   ): Promise<void> {
-    const wordId = await this.wordService.getRandomWordId();
+    const wordId = await this.wordService.getRandomWordId(locale);
     res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
   }
 
@@ -138,11 +146,13 @@ export class WordController {
   @ApiResponse({ status: HttpStatus.OK, type: WordDto })
   @ApiNotFoundResponse({ type: ApiException })
   @ApiOperation(GetOperationId(Word.modelName, 'DailyWord'))
+  @ApiImplicitQuery({ name: 'locale', required: false })
   async getDailyWord(
     @Request() req,
     @Response() res,
+    @Query('locale') locale?: string,
   ): Promise<void> {
-    const wordId = await this.wordService.getDailyWordId();
+    const wordId = await this.wordService.getDailyWordId(locale);
     res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
   }
 

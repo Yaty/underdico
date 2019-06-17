@@ -25,7 +25,9 @@ export class WordMapper extends BaseMapper<WordDto, Word> {
       tags: 'tags',
       locale: 'locale',
       user: (it) => this.userMapper.map(it.user),
-      score: () => word.votes.reduce((score, vote: Vote) => score + (vote.value ? 1 : -1), 0),
+      // @ts-ignore
+      score: (it) => typeof it.score === 'number' ? it.score // on GET words without a where score is already calculated
+        : word.votes.reduce((score, vote: Vote) => score + (vote.value ? 1 : -1), 0),
     };
 
     if (userId) {

@@ -39,6 +39,6 @@ export function configure(app) {
   }));
 
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useWebSocketAdapter(new RedisIoAdapter());
+  app.useWebSocketAdapter(new RedisIoAdapter(app));
   app.enableCors();
 }

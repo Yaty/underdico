@@ -60,7 +60,7 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
     }).lean().exec();
   }
 
-  async getTodayBestWordIdByVote() {
+  async getTodayBestWordIdByVote(locale?: string) {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
 
@@ -75,6 +75,16 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
           $lte: end,
         },
       })
+      .lookup({
+        from: 'words',
+        localField: 'wordId',
+        foreignField: '_id',
+        as: 'word',
+      })
+      .unwind('word')
+      .match(locale ? {
+        'word.locale': locale,
+      } : {})
       .group({
         _id: '$wordId',
         score: {

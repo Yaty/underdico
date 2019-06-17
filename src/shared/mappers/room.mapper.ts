@@ -19,11 +19,7 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       isRanked: 'isRanked',
       status: 'status',
       locale: 'locale',
-      currentPlayer: 'currentPlayer',
-      currentWord: 'currentWord',
-      enteredAt: 'enteredAt',
-      leavedAt: 'leavedAt',
-      words: 'words',
+      rounds: 'rounds',
     });
   }
 

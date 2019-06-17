@@ -10,6 +10,7 @@ import { WordMapper } from '../shared/mappers/word.mapper';
 import { Vote } from '../vote/models/vote.model';
 import { VoteService } from '../vote/vote.service';
 import { UpdateWordDto } from './dto/update-word.dto';
+import { Sort } from './interfaces/sort.interface';
 
 @Injectable()
 export class WordService extends BaseService<Word, WordDto> {
@@ -48,6 +49,7 @@ export class WordService extends BaseService<Word, WordDto> {
 
     return {
       user: owner,
+      score: 0,
       ...result.toJSON(),
     };
   }
@@ -66,53 +68,107 @@ export class WordService extends BaseService<Word, WordDto> {
     return this.findWordById(wordId);
   }
 
-  async getAggregatedWords(skip: number, take: number): Promise<{
-    words: Word[],
-    count: number,
-  }> {
-    const [
-      words,
-      count,
-    ] = await Promise.all([
-      this.wordModel
-        .aggregate()
-        .sort({
-          createdAt: 'descending',
-        })
-        .skip(skip)
-        .limit(take)
-        .lookup(this.votesLookupOption)
-        .lookup(this.usersLookupOption)
-        .unwind('user')
-        .exec(),
-      this.count(),
-    ]);
+  private buildPipeline(skip?: number, take?: number, where?: object, sort?: Sort): object[] {
+    const pipeline = [];
 
-    return {
-      words,
-      count,
-    };
+    if (where) {
+      pipeline.push({
+        $match: where,
+      });
+    }
+
+    // FIXME: where is not working because of this stuff
+    pipeline.push({
+      $lookup: this.votesLookupOption,
+    }, {
+      $unwind: '$votes',
+    }, {
+      $group: {
+        _id: '$_id',
+        votes: {
+          $push: '$votes',
+        },
+        score: {
+          $sum: {
+            $cond: [
+              '$votes.value',
+              1,
+              -1,
+            ],
+          },
+        },
+        userId: {
+          $first: '$userId',
+        },
+        definition: {
+          $first: '$definition',
+        },
+        createdAt: {
+          $first: '$createdAt',
+        },
+        updatedAt: {
+          $first: '$updatedAt',
+        },
+        name: {
+          $first: '$name',
+        },
+        tags: {
+          $first: '$tags',
+        },
+        locale: {
+          $first: '$locale',
+        },
+      },
+    });
+
+    if (sort) {
+      pipeline.push({
+        $sort: {
+          [sort.field]: sort.ordering === 'asc' ? 1 : -1,
+        },
+      });
+    } else {
+      pipeline.push({
+        $sort: {
+          createdAt: -1,
+        },
+      });
+    }
+
+    // Paginate
+    if (typeof skip === 'number' && skip > 0) {
+      pipeline.push({
+        $skip: skip,
+      });
+    }
+
+    if (typeof take === 'number' && take > 0) {
+      pipeline.push({
+        $limit: take,
+      });
+    }
+
+    // Add user
+    pipeline.push({
+      $lookup: this.usersLookupOption,
+    }, {
+      $unwind: '$user',
+    });
+
+    return pipeline;
   }
 
-  async getAggregatedWordsWithFilter(take: number, where: object): Promise<{
+  async getAggregatedWords(skip: number, take: number, where?: object, sort?: Sort): Promise<{
     words: Word[],
     count: number,
   }> {
+    const pipeline = this.buildPipeline(skip, take, where, sort);
+
     const [
       words,
       count,
     ] = await Promise.all([
-      this.wordModel
-        .aggregate()
-        .match(where)
-        .limit(take)
-        .sort({
-          createdAt: 'descending',
-        })
-        .lookup(this.votesLookupOption)
-        .lookup(this.usersLookupOption)
-        .unwind('user')
-        .exec(),
+      this.wordModel.aggregate(pipeline).exec(),
       this.count(),
     ]);
 
@@ -140,19 +196,29 @@ export class WordService extends BaseService<Word, WordDto> {
     return words[0];
   }
 
-  async getRandomWord(): Promise<Word> {
-    const count = await this.count();
+  async getRandomWord(locale?: string): Promise<Word> {
+    const count = await this.count({
+      locale,
+    });
+
     const random = Math.floor(Math.random() * count);
-    return this.wordModel.findOne().skip(random).lean().exec();
+
+    return this.wordModel.findOne()
+      .where(locale ? {
+        locale,
+      } : {})
+      .skip(random)
+      .lean()
+      .exec();
   }
 
-  async getRandomWordId(): Promise<string> {
-    const word = await this.getRandomWord();
+  async getRandomWordId(locale?: string): Promise<string> {
+    const word = await this.getRandomWord(locale);
     return BaseService.objectIdToString(word._id);
   }
 
-  getDailyWordId(): Promise<string> {
-    return this.voteService.getTodayBestWordIdByVote();
+  getDailyWordId(locale?: string): Promise<string> {
+    return this.voteService.getTodayBestWordIdByVote(locale);
   }
 
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {

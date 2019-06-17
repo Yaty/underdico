@@ -1,6 +1,7 @@
-import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
+import { ApiModelProperty } from '@nestjs/swagger';
 import { BaseModelDto } from '../../shared/base.model';
 import { RoomStatus } from '../models/room-status.enum';
+import { RoundDto } from './round.dto';
 
 export class RoomDto extends BaseModelDto {
   @ApiModelProperty()
@@ -29,18 +30,6 @@ export class RoomDto extends BaseModelDto {
   @ApiModelProperty()
   readonly locale: string;
 
-  @ApiModelProperty({ type: String, format: 'date-time' })
-  readonly enteredAt: string;
-
-  @ApiModelProperty({ type: String, format: 'date-time' })
-  readonly leavedAt: string;
-
-  @ApiModelPropertyOptional()
-  readonly currentWord?: string;
-
-  @ApiModelPropertyOptional()
-  readonly currentPlayer?: string;
-
   @ApiModelProperty()
-  readonly words: string[];
+  readonly rounds: RoundDto[];
 }

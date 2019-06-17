@@ -5,15 +5,18 @@ import { AppModule } from '../src/app.module';
 import { configure } from '../src/app.configuration';
 import * as supertest from 'supertest';
 import { INestApplication } from '@nestjs/common';
+import * as pEvent from 'p-event';
+import { RoomService } from '../src/room/room.service';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe.skip('Event (E2E)', () => {
+describe('Event (E2E)', () => {
   let app: INestApplication;
+  let roomService: RoomService;
   let utils: TestUtils;
   let api;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -21,8 +24,14 @@ describe.skip('Event (E2E)', () => {
     app = moduleFixture.createNestApplication();
     configure(app);
     await app.init();
+    roomService = moduleFixture.get<RoomService>(RoomService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
+  });
+
+  afterEach(async () => {
+    await app.close();
+    await wait(1000);
   });
 
   it('should connect', async () => {
@@ -44,32 +53,61 @@ describe.skip('Event (E2E)', () => {
 
     const roomId = await utils.createRoom(ownerAuth.token);
 
-    await app.listen(3005);
-    const ownerSocketIOClient = socketIOClient.connect('ws://localhost:3005');
-    const player1SocketIOClient = socketIOClient.connect('ws://localhost:3005');
+    await app.listen(3006);
+
+    const ownerSocketIOClient = socketIOClient.connect('ws://localhost:3006', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const player1SocketIOClient = socketIOClient.connect('ws://localhost:3006', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + player1Auth.token,
+      },
+    });
 
     player1SocketIOClient.emit('joinRoom', {
       roomId,
-      token: player1Auth.token,
     });
 
     ownerSocketIOClient.emit('joinRoom', {
       roomId,
+    });
+
+    await pEvent(player1SocketIOClient, 'newPlayer');
+
+    ownerSocketIOClient.emit('startRoom', {
+      roomId,
       token: ownerAuth.token,
     });
 
-    await wait(100);
+    await pEvent(player1SocketIOClient, 'roomStarted');
 
-    return new Promise(async (resolve, reject) => {
-      ownerSocketIOClient.emit('startRoom', {
-        roomId,
-        token: ownerAuth.token,
-      });
+    const [newRound] = await Promise.all([
+      pEvent(ownerSocketIOClient, 'newRound'),
+      pEvent(player1SocketIOClient, 'newRound'),
+    ]);
 
-      player1SocketIOClient.once('roomStarted', (message) => {
-        // TODO
-        resolve();
-      });
+    // @ts-ignore
+    const playerSocket = ownerAuth.userId === newRound.nextPlayerId ? ownerSocketIOClient : player1SocketIOClient;
+
+    const room = await roomService.findById(roomId);
+    const goodWord = room.wordsIds[room.wordsIds.length - 1];
+
+    playerSocket.emit('play', {
+      roomId,
+      proposal: goodWord,
     });
-  });
+
+    const [play] = await Promise.all([
+      pEvent(ownerSocketIOClient, 'goodProposal'),
+      pEvent(ownerSocketIOClient, 'goodProposal'),
+    ]);
+
+    // @ts-ignore
+    expect(play.playerId).toEqual(player);
+  }, 60000);
 });

@@ -1,11 +1,11 @@
 import * as uuid from 'uuid/v4';
 import * as jwt from 'jsonwebtoken';
+import { SignOptions } from 'jsonwebtoken';
 import * as ms from 'ms';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { UserService } from '../../user/user.service';
 import { JwtPayload } from './jwt-payload.interface';
 import { User } from '../../user/models/user.model';
-import { SignOptions } from 'jsonwebtoken';
 import { ConfigurationService } from '../configuration/configuration.service';
 import { Configuration } from '../configuration/configuration.enum';
 import { JwtDto } from './jwt.dto';
@@ -43,8 +43,6 @@ export class AuthService {
   }
 
   async validateUser(validatePayload: JwtPayload): Promise<User> {
-    return this.userService.findOne({
-      _id: validatePayload.id,
-    });
+    return this.userService.findById(validatePayload.id);
   }
 }
