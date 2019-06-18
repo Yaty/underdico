@@ -77,7 +77,6 @@ export class EventGateway {
         nextPlayerId: await this.roomService.getNextPlayerId(dto),
       });
     }
-
   }
 
   // FIXME: Use events here to decouple from RoomService
