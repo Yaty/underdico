@@ -77,46 +77,38 @@ export class WordService extends BaseService<Word, WordDto> {
       });
     }
 
-    // FIXME: where is not working because of this stuff
     pipeline.push({
       $lookup: this.votesLookupOption,
     }, {
-      $unwind: '$votes',
-    }, {
-      $group: {
-        _id: '$_id',
-        votes: {
-          $push: '$votes',
-        },
-        score: {
-          $sum: {
-            $cond: [
-              '$votes.value',
-              1,
-              -1,
-            ],
+      $addFields: {
+        scoresInBoolean: {
+          $map: {
+            input: '$votes',
+            as: 'vote',
+            in: '$$vote.value',
           },
         },
-        userId: {
-          $first: '$userId',
+      },
+    }, {
+      $addFields: {
+        scoresInInteger: {
+          $map: {
+            input: '$scoresInBoolean',
+            as: 'scoreInBoolean',
+            in: {
+              $cond: [
+                '$$scoreInBoolean',
+                1,
+                -1,
+              ],
+            },
+          },
         },
-        definition: {
-          $first: '$definition',
-        },
-        createdAt: {
-          $first: '$createdAt',
-        },
-        updatedAt: {
-          $first: '$updatedAt',
-        },
-        name: {
-          $first: '$name',
-        },
-        tags: {
-          $first: '$tags',
-        },
-        locale: {
-          $first: '$locale',
+      },
+    }, {
+      $addFields: {
+        score: {
+          $sum: '$scoresInInteger',
         },
       },
     });

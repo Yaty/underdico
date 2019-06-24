@@ -220,19 +220,23 @@ describe('WordController (e2e)', () => {
   it('/words (GET) with sort on votes and where on locale', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
-    const word1 = await utils.createWord(auth.token, 'en');
-    const word2 = await utils.createWord(auth.token, 'en');
+    const word1 = await utils.createWord(auth.token, 'ar');
+    const word2 = await utils.createWord(auth.token, 'ar');
     const word3 = await utils.createWord(auth.token, 'fr');
+
+    await utils.voteForAWord(auth.token, word1.id, true);
     await utils.voteForAWord(auth.token, word1.id, true);
 
-    await api.get('/api/words?sort=score,desc&where={"locale": "en"}')
+    await utils.voteForAWord(auth.token, word2.id, true);
+
+    await api.get('/api/words?sort=score,desc&where={"locale": "ar"}')
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(200)
       .then((res) => {
         expect(Array.isArray(res.body)).toBeTruthy();
 
-        const w1Index = res.body.indexOf((w) => w.id === word1.id);
-        const w2Index = res.body.indexOf((w) => w.id === word2.id);
+        const w1Index = res.body.findIndex((w) => w.id === word1.id);
+        const w2Index = res.body.findIndex((w) => w.id === word2.id);
 
         expect(w1Index).toBeGreaterThanOrEqual(0);
         expect(w2Index).toBeGreaterThanOrEqual(1);
@@ -240,7 +244,38 @@ describe('WordController (e2e)', () => {
 
         for (const w of res.body) {
           expect(w.id === word3.id).toBeFalsy();
+          expect(w.locale).toEqual('ar');
         }
+      });
+  });
+
+  it('/words (GET) with insensitive search', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+
+    await api.get('/api/words/?where=' + JSON.stringify({
+      name: {
+        $regex: word.name.toLowerCase(),
+        $options: 'i',
+      },
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(res.body.length).toEqual(1);
+        expect(res.body[0].id).toEqual(word.id);
+      });
+
+    await api.get('/api/words/?where=' + JSON.stringify({
+      name: {
+        $regex: word.name.toUpperCase(),
+        $options: 'i',
+      },
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(res.body.length).toEqual(1);
+        expect(res.body[0].id).toEqual(word.id);
       });
   });
 

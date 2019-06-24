@@ -1,10 +1,19 @@
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as packageJson from 'pjson';
-import { ValidationPipe } from '@nestjs/common';
+import { CallHandler, ExecutionContext, NestInterceptor, ValidationPipe } from '@nestjs/common';
 import { CustomValidationError } from './shared/errors/custom-validation.error';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { RedisIoAdapter } from './shared/adapters/redis-io.adapter';
+import { Observable } from 'rxjs';
+
+class ExposeHeadersInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const response = context.switchToHttp().getResponse();
+    response.set('Access-Control-Expose-Headers', 'Content-Range,Accept-Range');
+    return next.handle();
+  }
+}
 
 export function configure(app) {
   const hostDomain = AppModule.isDev ? `${AppModule.host}:${AppModule.port}` : AppModule.host;
@@ -37,6 +46,8 @@ export function configure(app) {
   app.useGlobalPipes(new ValidationPipe({
     exceptionFactory: (errors) => new CustomValidationError(errors),
   }));
+
+  app.useGlobalInterceptors(new ExposeHeadersInterceptor());
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useWebSocketAdapter(new RedisIoAdapter(app));
