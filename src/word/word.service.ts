@@ -209,8 +209,26 @@ export class WordService extends BaseService<Word, WordDto> {
     return BaseService.objectIdToString(word._id);
   }
 
-  getDailyWordId(locale?: string): Promise<string> {
-    return this.voteService.getTodayBestWordIdByVote(locale);
+  async getDailyWordId(locale?: string): Promise<string> {
+    const {
+      words,
+    } = await this.getAggregatedWords(
+      0,
+      0,
+      locale ? {
+        locale,
+      } : {},
+      {
+        field: 'score',
+        ordering: 'desc',
+      },
+    );
+
+    if (words.length === 0) {
+      throw new NotFoundException();
+    }
+
+    return BaseService.objectIdToString(words[0]._id);
   }
 
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {
