@@ -140,6 +140,98 @@ describe('WordController (e2e)', () => {
       });
   });
 
+  it('/words (GET) with filter on score', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+
+    for (let i = 0; i < 5; i++) {
+      await utils.voteForAWord(auth.token, word.id, true);
+    }
+
+    return api.get('/api/words?where=' + JSON.stringify({
+      score: 5,
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body.length).toBeGreaterThan(0);
+
+        let found = false;
+
+        for (const w of res.body) {
+          if (w.id === word.id) {
+            found = true;
+          }
+
+          expect(w.score).toEqual(5);
+        }
+
+        expect(found).toBeTruthy();
+      });
+  });
+
+  it('/words (GET) with filter on a date', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+
+    return api.get('/api/words?where=' + JSON.stringify({
+      $expr: {
+        $eq: ['$createdAt', {
+          $dateFromString: {
+            dateString: word.createdAt,
+          },
+        }],
+      },
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body.length).toEqual(1);
+        expect(res.body[0].id).toEqual(word.id);
+      });
+  });
+
+  it('/words (GET) with filter on interval of a date', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+    const createdAt = new Date(word.createdAt);
+    const before = new Date(createdAt);
+    const after = new Date(createdAt);
+
+    before.setSeconds(createdAt.getSeconds() - 1);
+    after.setSeconds(createdAt.getSeconds() + 1);
+
+    return api.get('/api/words?where=' + JSON.stringify({
+      $expr: {
+        $and: [
+          {
+            $gt: ['$createdAt', {
+              $dateFromString: {
+                dateString: before.toISOString(),
+              },
+            }],
+          },
+          {
+            $lt: ['$createdAt', {
+              $dateFromString: {
+                dateString: after.toISOString(),
+              },
+            }],
+          },
+        ],
+      },
+    }))
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body.length).toEqual(1);
+        expect(res.body[0].id).toEqual(word.id);
+      });
+  });
+
   it('/words (GET) with sort on score', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
