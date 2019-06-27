@@ -60,7 +60,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     });
   }
 
-  async addPlayer(dto: JoinRoomDto): Promise<boolean> {
+  async addPlayer(dto: JoinRoomDto): Promise<void> {
     const room = await this.roomModel.findByIdAndUpdate(dto.roomId, {
       $addToSet: {
         playersIds: dto.user._id,
@@ -72,11 +72,9 @@ export class RoomService extends BaseService<Room, RoomDto> {
     if (!room) {
       throw new WsException('Room not found');
     }
-
-    return true;
   }
 
-  async removePlayer(dto: LeaveRoomDto): Promise<boolean> {
+  async removePlayer(dto: LeaveRoomDto): Promise<void> {
     const room = await this.roomModel.findByIdAndUpdate(dto.roomId, {
       $pull: {
         playersIds: dto.user._id,
@@ -88,11 +86,9 @@ export class RoomService extends BaseService<Room, RoomDto> {
     if (!room) {
       throw new WsException('Room not found');
     }
-
-    return true;
   }
 
-  async startRoom(dto: StartRoomDto): Promise<boolean> {
+  async startRoom(dto: StartRoomDto): Promise<void> {
     const room = await this.roomModel.findByIdAndUpdate(dto.roomId, {
       status: RoomStatus.Started,
     }, {
@@ -102,8 +98,6 @@ export class RoomService extends BaseService<Room, RoomDto> {
     if (!room) {
       throw new WsException('Room not found');
     }
-
-    return true;
   }
 
   async startNextRound(roomId: string): Promise<void> {

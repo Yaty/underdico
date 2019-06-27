@@ -23,9 +23,9 @@ export class EventGateway {
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('joinRoom')
   async joinRoom(socket: Socket, dto: JoinRoomDto): Promise<void> {
-    const playerAdded = await this.roomService.addPlayer(dto);
+    try {
+      await this.roomService.addPlayer(dto);
 
-    if (playerAdded) {
       socket.join(dto.roomId);
 
       this.server.to(dto.roomId).emit('newPlayer', {
@@ -33,6 +33,8 @@ export class EventGateway {
         karma: dto.user.karma,
         username: dto.user.username,
       });
+    } catch (err) {
+      this.sendError(socket, 'joinRoom', err);
     }
   }
 
@@ -45,37 +47,46 @@ export class EventGateway {
       id: dto.user._id,
     });
 
-    await this.roomService.removePlayer(dto);
+    try {
+      await this.roomService.removePlayer(dto);
+    } catch (err) {
+      this.sendError(socket, 'leaveRoom', err);
+    }
   }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('startRoom')
   async startRoom(socket: Socket, dto: StartRoomDto): Promise<void> {
-    const roomStarted = await this.roomService.startRoom(dto);
-
-    if (roomStarted) {
+    try {
+      await this.roomService.startRoom(dto);
       this.server.to(dto.roomId).emit('roomStarted');
       await wait(1000); // let some time for every players to prepare UI
       await this.roomService.startNextRound(dto.roomId);
+    } catch (err) {
+      this.sendError(socket, 'startRoom', err);
     }
   }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('play')
   async play(socket: Socket, dto: PlayDto): Promise<void> {
-    const isCorrectProposal = await this.roomService.checkProposal(dto, dto.user);
+    try {
+      const isCorrectProposal = await this.roomService.checkProposal(dto, dto.user);
 
-    if (isCorrectProposal) {
-      this.server.to(dto.roomId).emit('goodProposal', {
-        playerId: dto.user._id,
-      });
+      if (isCorrectProposal) {
+        this.server.to(dto.roomId).emit('goodProposal', {
+          playerId: dto.user._id,
+        });
 
-      await this.roomService.startNextRound(dto.roomId);
-    } else {
-      this.server.to(dto.roomId).emit('wrongProposal', {
-        playerId: dto.user._id,
-        nextPlayerId: await this.roomService.getNextPlayerId(dto),
-      });
+        await this.roomService.startNextRound(dto.roomId);
+      } else {
+        this.server.to(dto.roomId).emit('wrongProposal', {
+          playerId: dto.user._id,
+          nextPlayerId: await this.roomService.getNextPlayerId(dto),
+        });
+      }
+    } catch (err) {
+      this.sendError(socket, 'play', err);
     }
   }
 
@@ -84,6 +95,13 @@ export class EventGateway {
     this.server.to(roomId).emit('newRound', {
       definition: word.definition,
       nextPlayerId,
+    });
+  }
+
+  sendError(socket: Socket, event: string, error: Error) {
+    socket.emit('error', {
+      ...error,
+      event,
     });
   }
 
