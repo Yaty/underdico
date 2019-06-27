@@ -51,5 +51,11 @@ export function configure(app) {
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useWebSocketAdapter(new RedisIoAdapter(app));
-  app.enableCors();
+
+  app.enableCors({
+    credentials: true,
+    origin(requestOrigin, cb) {
+      cb(null, true);
+    },
+  });
 }
