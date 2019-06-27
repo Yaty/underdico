@@ -68,13 +68,18 @@ export class WordService extends BaseService<Word, WordDto> {
     return this.findWordById(wordId);
   }
 
-  private buildPipeline(skip?: number, take?: number, where?: object, sort?: Sort): object[] {
+  private buildPipeline(skip?: number, take?: number, where?: {[key: string]: any}, sort?: Sort): object[] {
     const pipeline = [];
+    const whereOnScore = where && 'score' in where;
 
-    if (where) {
+    const applyWhere = () => {
       pipeline.push({
         $match: where,
       });
+    };
+
+    if (!whereOnScore && where) {
+      applyWhere();
     }
 
     pipeline.push({
@@ -125,6 +130,10 @@ export class WordService extends BaseService<Word, WordDto> {
           createdAt: -1,
         },
       });
+    }
+
+    if (whereOnScore) {
+      applyWhere();
     }
 
     // Paginate
