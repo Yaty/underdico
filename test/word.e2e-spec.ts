@@ -60,6 +60,7 @@ describe('WordController (e2e)', () => {
     }
 
     expect(typeof word.user.id === 'string').toBeTruthy();
+    expect(typeof word.user.karma === 'number').toBeTruthy();
     expect(word).toHaveProperty('locale');
     expect(word).toHaveProperty('score');
   }

@@ -46,12 +46,7 @@ export class WordService extends BaseService<Word, WordDto> {
     newWord.locale = word.locale;
 
     const result = await this.create(newWord);
-
-    return {
-      user: owner,
-      score: 0,
-      ...result.toJSON(),
-    };
+    return this.findWordById(result._id);
   }
 
   async updateWord(wordId: string, dto: UpdateWordDto, user: User): Promise<Word> {
@@ -173,6 +168,10 @@ export class WordService extends BaseService<Word, WordDto> {
       this.count(),
     ]);
 
+    await Promise.all(words.map(async (word) => {
+      word.user.karma = await this.getUserWordsTotalScore(word.userId);
+    }));
+
     return {
       words,
       count,
@@ -194,6 +193,8 @@ export class WordService extends BaseService<Word, WordDto> {
       throw new NotFoundException('Word not found');
     }
 
+    words[0].user.karma = await this.getUserWordsTotalScore(words[0].userId);
+
     return words[0];
   }
 
@@ -205,11 +206,17 @@ export class WordService extends BaseService<Word, WordDto> {
     const count = await this.count(where);
     const random = Math.floor(Math.random() * count);
 
-    return this.wordModel.findOne()
+    const word = await this.wordModel.findOne()
       .where(where)
       .skip(random)
       .lean()
       .exec();
+
+    if (!word) {
+      throw new NotFoundException();
+    }
+
+    return this.findWordById(BaseService.objectIdToString(word._id));
   }
 
   async getRandomWordId(locale?: string): Promise<string> {
