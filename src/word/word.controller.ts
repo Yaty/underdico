@@ -139,7 +139,7 @@ export class WordController {
     @Query('locale') locale?: string,
   ): Promise<void> {
     const wordId = await this.wordService.getRandomWordId(locale);
-    res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
+    res.redirect(`https://${req.get('host')}/api/words/${wordId}`);
   }
 
   @Get('daily')
@@ -153,7 +153,7 @@ export class WordController {
     @Query('locale') locale?: string,
   ): Promise<void> {
     const wordId = await this.wordService.getDailyWordId(locale);
-    res.redirect(`${req.protocol}://${req.get('host')}/api/words/${wordId}`);
+    res.redirect(`https://${req.get('host')}/api/words/${wordId}`);
   }
 
   @Get(':wordId')

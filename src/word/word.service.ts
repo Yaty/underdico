@@ -198,16 +198,15 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async getRandomWord(locale?: string): Promise<Word> {
-    const count = await this.count({
+    const where = locale ? {
       locale,
-    });
+    } : {};
 
+    const count = await this.count(where);
     const random = Math.floor(Math.random() * count);
 
     return this.wordModel.findOne()
-      .where(locale ? {
-        locale,
-      } : {})
+      .where(where)
       .skip(random)
       .lean()
       .exec();
@@ -219,25 +218,7 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async getDailyWordId(locale?: string): Promise<string> {
-    const {
-      words,
-    } = await this.getAggregatedWords(
-      0,
-      0,
-      locale ? {
-        locale,
-      } : {},
-      {
-        field: 'score',
-        ordering: 'desc',
-      },
-    );
-
-    if (words.length === 0) {
-      throw new NotFoundException();
-    }
-
-    return BaseService.objectIdToString(words[0]._id);
+    return this.voteService.getTodayBestWordIdByVote(locale);
   }
 
   async createVote(wordId: string, voteValue: boolean, user: User): Promise<Vote> {

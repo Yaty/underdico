@@ -201,8 +201,8 @@ describe('WordController (e2e)', () => {
     const before = new Date(createdAt);
     const after = new Date(createdAt);
 
-    before.setSeconds(createdAt.getSeconds() - 1);
-    after.setSeconds(createdAt.getSeconds() + 1);
+    before.setMilliseconds(createdAt.getMilliseconds() - 1);
+    after.setMilliseconds(createdAt.getMilliseconds() + 1);
 
     return api.get('/api/words?where=' + JSON.stringify({
       $expr: {
@@ -456,11 +456,18 @@ describe('WordController (e2e)', () => {
   });
 
   it('/words/random (GET)', async () => {
-    await api.get('/api/words/random')
-      .expect(302)
-      .then((res) => {
-        expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
-      });
+    const locations = [];
+
+    for (let i = 0; i < 2; i++) {
+      await api.get('/api/words/random')
+        .expect(302)
+        .then((res) => {
+          expect(res.header.location).toMatch(/https:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
+          locations.push(res.header.location);
+        });
+    }
+
+    expect([...new Set(locations)].length).toEqual(2);
   });
 
   it('/words/random (GET) with locale', async () => {
@@ -471,7 +478,7 @@ describe('WordController (e2e)', () => {
     await api.get('/api/words/random?locale=en')
       .expect(302)
       .then((res) => {
-        expect(res.header.location).toMatch(/http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
+        expect(res.header.location).toMatch(/https:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/[0-9a-z]{24}/);
         return api.get('/api/words/' + res.header.location.split('/').pop()).expect(200);
       })
       .then((res) => {
@@ -495,7 +502,7 @@ describe('WordController (e2e)', () => {
     await api.get('/api/words/daily')
       .expect(302)
       .then((res) => {
-        expect(res.header.location).toMatch(new RegExp('http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWord.id));
+        expect(res.header.location).toMatch(new RegExp('https:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWord.id));
       });
   });
 
@@ -519,7 +526,7 @@ describe('WordController (e2e)', () => {
     await api.get('/api/words/daily?locale=' + locale)
       .expect(302)
       .then((res) => {
-        expect(res.header.location).toMatch(new RegExp('http:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWordInCorrectLocale.id));
+        expect(res.header.location).toMatch(new RegExp('https:\/\/127\.0\.0\.1:[0-9]+\/api\/words\/' + bestWordInCorrectLocale.id));
       });
   });
 
