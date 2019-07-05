@@ -39,6 +39,10 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
   }
 
   async updateVote(voteId: string, voteValue: boolean, user: User): Promise<Vote> {
+    if (BaseService.isInvalidObjectId(voteId)) {
+      throw new NotFoundException('Vote not found');
+    }
+
     const vote = await this.voteModel.findOne({
       _id: voteId,
     }).lean().exec();

@@ -116,10 +116,11 @@ export default class TestUtils {
     });
   }
 
-  createRoom(token: string): Promise<string> {
+  createRoom(token: string, data: object = {}): Promise<string> {
     return new Promise((resolve, reject) => {
       const room: CreateRoomDto = {
         name: uuid(),
+        ...data,
       };
 
       this.api.post('/api/rooms')

@@ -25,10 +25,16 @@ export class RoomDto extends BaseModelDto {
   readonly playersIds: string[];
 
   @ApiModelProperty()
+  readonly usernames: string[];
+
+  @ApiModelProperty()
   readonly ownerId: string;
 
   @ApiModelProperty()
   readonly locale: string;
+
+  @ApiModelProperty()
+  readonly timeout: number;
 
   @ApiModelProperty()
   readonly rounds: RoundDto[];

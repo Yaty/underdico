@@ -1,3 +1,5 @@
+// tslint:disable:no-console
+
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
@@ -15,6 +17,7 @@ import { PlayDto } from '../event/dto/play.dto';
 import { WsException } from '@nestjs/websockets';
 import { EventGateway } from '../event/event.gateway';
 import { WordService } from '../word/word.service';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class RoomService extends BaseService<Room, RoomDto> {
@@ -37,27 +40,54 @@ export class RoomService extends BaseService<Room, RoomDto> {
     };
 
     const [rooms, count] = await Promise.all([
-      this.roomModel
-        .aggregate()
-        .match(match)
-        .skip(skip)
-        .limit(take)
-        .exec(),
-      this.roomModel.countDocuments(match),
+      this.roomModel.aggregate([{
+        $match: match,
+      }, {
+        $sort: {
+          createdAt: -1,
+        },
+      }, {
+        $skip: skip,
+      }, {
+        $limit: take,
+      }, {
+        $lookup: {
+          from: 'users',
+          localField: 'playersIds',
+          foreignField: '_id',
+          as: 'users',
+        },
+      }, {
+        $addFields: {
+          usernames: {
+            $map: {
+              input: '$users',
+              as: 'user',
+              in: '$$user.username',
+            },
+          },
+        },
+      }]).exec(),
+      this.roomModel.countDocuments(match).exec(),
     ]);
 
-    return {
+    return  {
       rooms,
       count,
     };
   }
 
-  createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
-    return this.roomModel.create({
+  async createRoom(dto: CreateRoomDto, owner: User): Promise<RoomDto> {
+    const createdRoom = await this.roomModel.create({
       ...dto,
       playersIds: [owner._id],
       ownerId: owner._id,
     });
+
+    return {
+      ...createdRoom.toJSON(),
+      usernames: [owner.username],
+    };
   }
 
   async addPlayer(dto: JoinRoomDto): Promise<void> {
@@ -98,6 +128,14 @@ export class RoomService extends BaseService<Room, RoomDto> {
     if (!room) {
       throw new WsException('Room not found');
     }
+
+    setTimeout(async () => {
+      try {
+        await this.startNextRound(dto.roomId);
+      } catch (err) {
+        console.error(err, 'Error while launching first round');
+      }
+    }, 1000);
   }
 
   async startNextRound(roomId: string): Promise<void> {
@@ -113,9 +151,21 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('No word');
     }
 
-    const nextPlayerId = room.playersIds[Math.round(Math.random() * room.playersIds.length)];
+    const currentPlayerId: string | null = room.playersIds.length > 0 ? room.playersIds[room.playersIds.length - 1] : null;
+    let nextPlayerId: Types.ObjectId;
 
-    await this.roomModel.updateOne({
+    if (currentPlayerId) {
+      // Get the next player in the order of subscription
+      nextPlayerId = (room.playersIds[
+        (room.playersIds.findIndex((v) => v === RoomService.toObjectId(currentPlayerId)) + 1)
+        % room.playersIds.length
+      ]);
+    } else {
+      // For the first one get a random player
+      nextPlayerId = room.playersIds[Math.round(Math.random() * room.playersIds.length)];
+    }
+
+    const updatedRoom: Room = await this.roomModel.findOneAndUpdate({
       _id: roomId,
     }, {
       $push: {
@@ -125,12 +175,45 @@ export class RoomService extends BaseService<Room, RoomDto> {
           createdAt: new Date(),
         },
       },
+    }, {
+      new: true,
     }).exec();
 
-    await this.eventGateway.startNextRound(roomId, word, RoomService.objectIdToString(nextPlayerId));
+    const newRoundId = updatedRoom.rounds[updatedRoom.rounds.length - 1]._id;
+    const SEPARATORS = [' ', '-', '\''];
+    const obfuscatedWord: Array<string|null> = [];
+
+    for (const char of word.name) {
+      if (SEPARATORS.includes(char)) {
+        obfuscatedWord.push(char);
+      } else {
+        obfuscatedWord.push(null);
+      }
+    }
+
+    const obfuscatedDescription = word.definition.replace(
+      new RegExp(
+        word.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        'i',
+      ),
+      '',
+    );
+
+    await this.eventGateway.startNextRound(
+      roomId,
+      obfuscatedWord,
+      obfuscatedDescription,
+      nextPlayerId.toString(),
+    );
+
+    await this.handleTimeout(
+      roomId,
+      newRoundId,
+      nextPlayerId,
+    );
   }
 
-  async checkProposal(dto: PlayDto, player: User): Promise<boolean> {
+  async checkProposal(dto: PlayDto, player: User): Promise<[boolean, string?]> {
     const room = await this.roomModel
       .findById(dto.roomId)
       .lean()
@@ -162,14 +245,27 @@ export class RoomService extends BaseService<Room, RoomDto> {
           'rounds.$.currentPlayerId': null,
         },
       }).exec();
+
+      setTimeout(async () => {
+        try {
+          await this.startNextRound(dto.roomId);
+        } catch (err) {
+          console.error(err, 'Error while starting next round after good proposal.');
+        }
+      }, 1000);
+
+      return [true];
     }
 
-    return proposalResultIsCorrect;
+    return [
+      false,
+      await this.getNextPlayerId(dto.roomId),
+    ];
   }
 
-  async getNextPlayerId(dto: PlayDto): Promise<string> {
+  async getNextPlayerId(roomId: string): Promise<string> {
     const room = await this.roomModel
-      .findById(dto.roomId)
+      .findById(roomId)
       .lean()
       .exec();
 
@@ -177,7 +273,28 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('Room not found');
     }
 
-    const currentPlayerIndex = room.playersIds.findIndex(room.rounds[room.rounds.length - 1].currentPlayerId);
+    const currentPlayerIndex = room.playersIds.findIndex((playerId) => playerId === room.rounds[room.rounds.length - 1].currentPlayerId);
     return room.playersIds[currentPlayerIndex + 1 % room.playersIds.length];
+  }
+
+  async handleTimeout(roomId: string, roundId: Types.ObjectId, playerId: Types.ObjectId): Promise<void> {
+    let room = await this.roomModel.findById(roomId).lean().exec();
+
+    setTimeout(async () => {
+      try {
+        room = await this.roomModel.findById(roomId).lean().exec();
+        const round = room.rounds.find((r) => r._id.toString() === roundId.toString());
+
+        if (round.currentPlayerId.toString() === playerId.toString() && !round.terminatedAt) {
+          this.eventGateway.timeout(
+            roomId,
+            playerId.toString(),
+            await this.getNextPlayerId(roomId),
+          );
+        }
+      } catch (err) {
+        console.error(err, 'Error while handling round timeout');
+      }
+    }, room.timeout * 1000);
   }
 }

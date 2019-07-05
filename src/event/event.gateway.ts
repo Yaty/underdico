@@ -1,5 +1,7 @@
-import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+// tslint:disable:no-console
+
+import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Client, Server, Socket } from 'socket.io';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { LeaveRoomDto } from './dto/leave-room.dto';
 import { forwardRef, Inject, UseGuards } from '@nestjs/common';
@@ -7,12 +9,9 @@ import { WsJwtGuard } from '../shared/guards/ws.guard';
 import { StartRoomDto } from './dto/start-room.dto';
 import { RoomService } from '../room/room.service';
 import { PlayDto } from './dto/play.dto';
-import { Word } from '../word/models/word.model';
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 @WebSocketGateway()
-export class EventGateway {
+export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => RoomService)) private readonly roomService: RoomService,
   ) {}
@@ -23,6 +22,8 @@ export class EventGateway {
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('joinRoom')
   async joinRoom(socket: Socket, dto: JoinRoomDto): Promise<void> {
+    console.log('joinRoom', socket.id, dto.roomId);
+
     try {
       await this.roomService.addPlayer(dto);
 
@@ -34,13 +35,15 @@ export class EventGateway {
         username: dto.user.username,
       });
     } catch (err) {
-      this.sendError(socket, 'joinRoom', err);
+      this.sendError(socket, 'joinRoom', dto.roomId, err);
     }
   }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('leaveRoom')
   async leaveRoom(socket: Socket, dto: LeaveRoomDto): Promise<void> {
+    console.log('leaveRoom', socket.id, dto.roomId);
+
     socket.leave(dto.roomId);
 
     this.server.to(dto.roomId).emit('playerRemoved', {
@@ -50,62 +53,86 @@ export class EventGateway {
     try {
       await this.roomService.removePlayer(dto);
     } catch (err) {
-      this.sendError(socket, 'leaveRoom', err);
+      this.sendError(socket, 'leaveRoom', dto.roomId, err);
     }
   }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('startRoom')
   async startRoom(socket: Socket, dto: StartRoomDto): Promise<void> {
+    console.log('startRoom', socket.id, dto.roomId);
+
     try {
       await this.roomService.startRoom(dto);
       this.server.to(dto.roomId).emit('roomStarted');
-      await wait(1000); // let some time for every players to prepare UI
-      await this.roomService.startNextRound(dto.roomId);
     } catch (err) {
-      this.sendError(socket, 'startRoom', err);
+      this.sendError(socket, 'startRoom', dto.roomId, err);
     }
   }
 
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('play')
   async play(socket: Socket, dto: PlayDto): Promise<void> {
+    console.log('play', socket.id, dto.roomId, dto.proposal);
+
     try {
-      const isCorrectProposal = await this.roomService.checkProposal(dto, dto.user);
+      const [
+        isCorrectProposal,
+        nextPlayerId,
+      ] = await this.roomService.checkProposal(dto, dto.user);
 
       if (isCorrectProposal) {
         this.server.to(dto.roomId).emit('goodProposal', {
           playerId: dto.user._id,
         });
-
-        await this.roomService.startNextRound(dto.roomId);
       } else {
         this.server.to(dto.roomId).emit('wrongProposal', {
           playerId: dto.user._id,
-          nextPlayerId: await this.roomService.getNextPlayerId(dto),
+          nextPlayerId,
         });
       }
     } catch (err) {
-      this.sendError(socket, 'play', err);
+      this.sendError(socket, 'play', dto.roomId, err);
     }
   }
 
   // FIXME: Use events here to decouple from RoomService
-  startNextRound(roomId: string, word: Word, nextPlayerId: string): void {
+  startNextRound(roomId: string, obfuscatedWord: Array<string|null>, obfuscatedDefinition: string, nextPlayerId: string): void {
+    console.log('new round', roomId, obfuscatedWord, obfuscatedDefinition, nextPlayerId);
+
     this.server.to(roomId).emit('newRound', {
-      definition: word.definition,
+      definition: obfuscatedDefinition,
+      obfuscatedWord,
       nextPlayerId,
     });
   }
 
-  sendError(socket: Socket, event: string, error: Error) {
-    socket.emit('error', {
+  timeout(roomId: string, playerId: string, nextPlayerId: string) {
+    console.log('timeout', roomId, playerId, nextPlayerId);
+
+    this.server.to(roomId).emit('timeout', {
+      playerId,
+      nextPlayerId,
+    });
+  }
+
+  sendError(socket: Socket, event: string, roomId: string, error: Error) {
+    socket.emit('gameError', {
       ...error,
       event,
+      roomId,
     });
   }
 
   stopRoom(roomId: string): void {
     this.server.to(roomId).emit('stop');
+  }
+
+  handleConnection(client: Client): any {
+    console.log('New websocket client', client.id);
+  }
+
+  handleDisconnect(client: Client): any {
+    console.log('Websocket client disconnected', client.id);
   }
 }

@@ -36,6 +36,21 @@ describe('RoomController (e2e)', () => {
       });
   });
 
+  it('/api/rooms (GET) with usernames', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const roomId = await utils.createRoom(auth.token);
+
+    return api.get('/api/rooms')
+      .expect(200)
+      .then((res) => {
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body[0].id).toEqual(roomId);
+        expect(Array.isArray(res.body[0].usernames)).toBeTruthy();
+        expect(res.body[0].usernames[0]).toEqual(user.username);
+      });
+  });
+
   it('/api/rooms (POST)', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
@@ -59,6 +74,7 @@ describe('RoomController (e2e)', () => {
         expect(res.body.maxPlayers).toEqual(10);
         expect(res.body.ownerId).toEqual(auth.userId);
         expect(res.body.playersIds).toEqual([auth.userId]);
+        expect(res.body.usernames[0]).toEqual(user.username);
       });
   });
 });

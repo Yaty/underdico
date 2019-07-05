@@ -1,3 +1,5 @@
+// tslint:disable:no-console
+
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { AuthService } from '../auth/auth.service';
@@ -20,7 +22,8 @@ export class WsJwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext) {
     const client = context.switchToWs().getClient();
-    const authToken = ExtractJwt.fromAuthHeaderAsBearerToken()(client.handshake);
+    const authToken = ExtractJwt.fromAuthHeaderAsBearerToken()(client.handshake) || client.query.jwt;
+    console.log('WS auth middleware, token :', authToken, ', id :', client.id);
     const jwtPayload: JwtPayload = jwt.verify(authToken, this.jwtSecret) as JwtPayload;
     const user: User = await this.authService.validateUser(jwtPayload);
     context.switchToWs().getData().user = user;

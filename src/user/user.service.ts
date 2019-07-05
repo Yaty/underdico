@@ -115,14 +115,7 @@ export class UserService extends BaseService<User, UserDto> {
   }
 
   async updateUser(userId: string, dto: UpdateUserDto, authenticatedUser: User): Promise<User> {
-    const user = await this.userModel
-      .findById(userId)
-      .lean()
-      .exec();
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    const user = await this.findUserById(userId);
 
     if (BaseService.objectIdToString(user._id) !== BaseService.objectIdToString(authenticatedUser._id)) {
       throw new ForbiddenException('You do not own this user');
@@ -132,14 +125,18 @@ export class UserService extends BaseService<User, UserDto> {
       dto.password = await this.hashPassword(dto.password);
     }
 
-    return this.userModel.findOneAndUpdate({
+    await this.userModel.updateOne({
       _id: userId,
-    }, dto, {
-      new: true,
-    }).lean().exec();
+    }, dto).exec();
+
+    return this.findUserById(userId);
   }
 
   async findUserById(userId: string): Promise<User> {
+    if (BaseService.isInvalidObjectId(userId)) {
+      throw new NotFoundException('User not found');
+    }
+
     const user = await this.userModel
       .findById(userId)
       .lean()

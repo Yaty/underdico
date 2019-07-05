@@ -18,6 +18,10 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
   }
 
   async doNotExists(id: string): Promise<boolean> {
+    if (BaseService.isInvalidObjectId(id)) {
+      return true;
+    }
+
     return (await this.count({
       _id: id,
     })) === 0;
@@ -32,6 +36,10 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
   }
 
   findById(id: string): Promise<InstanceType<T>> {
+    if (BaseService.isInvalidObjectId(id)) {
+      return undefined;
+    }
+
     return this.model.findById(BaseService.toObjectId(id)).exec();
   }
 
@@ -40,10 +48,18 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
   }
 
   delete(id: string): Promise<InstanceType<T>> {
+    if (BaseService.isInvalidObjectId(id)) {
+      return undefined;
+    }
+
     return this.model.findByIdAndRemove(BaseService.toObjectId(id)).exec();
   }
 
   update(id: string, item: InstanceType<T>): Promise<InstanceType<T>> {
+    if (BaseService.isInvalidObjectId(id)) {
+      return undefined;
+    }
+
     return this.model.findByIdAndUpdate(BaseService.toObjectId(id), item, {
       new: true,
     }).exec();
@@ -63,5 +79,9 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
 
   public static objectIdToString(objectId: Types.ObjectId) {
     return objectId.toString();
+  }
+
+  public static isInvalidObjectId(id: string): boolean {
+    return !Types.ObjectId.isValid(id);
   }
 }

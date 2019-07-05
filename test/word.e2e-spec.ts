@@ -6,7 +6,6 @@ import { INestApplication } from '@nestjs/common';
 import { WordDto } from '../src/word/dto/word.dto';
 import { configure } from '../src/app.configuration';
 import TestUtils from './utils';
-import * as request from 'request-promise-native';
 import * as fs from 'fs';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 
@@ -266,6 +265,8 @@ describe('WordController (e2e)', () => {
     await api.get('/api/words?range=0-2')
       .expect(200)
       .then((res) => {
+        expect(res.body.length).toEqual(3);
+
         for (let i = 0; i < 3; i++) {
           expect(res.body[i].id).toEqual(words[i].id);
         }
@@ -274,11 +275,13 @@ describe('WordController (e2e)', () => {
     await api.get('/api/words?range=3-5')
       .expect(200)
       .then((res) => {
+        expect(res.body.length).toEqual(3);
+
         for (let i = 3; i < 6; i++) {
           expect(res.body[i - 3].id).toEqual(words[i].id);
         }
       });
-  });
+  }, 10000);
 
   it('/words (GET) with vote information', async () => {
     const user = await utils.createUser();
@@ -319,7 +322,6 @@ describe('WordController (e2e)', () => {
 
     await utils.voteForAWord(auth.token, word1.id, true);
     await utils.voteForAWord(auth.token, word1.id, true);
-
     await utils.voteForAWord(auth.token, word2.id, true);
 
     await api.get('/api/words?sort=score,desc&where={"locale": "ar"}')
@@ -383,6 +385,11 @@ describe('WordController (e2e)', () => {
         checkWord(word, res.body);
         expect(res.body.id).toEqual(word.id);
       });
+  });
+
+  it('/words/{wordId} (GET) returns 404 when word not found', async () => {
+    await api.get('/api/words/blabla')
+      .expect(404);
   });
 
   it('/words/{wordId} (GET) with the owner', async () => {
@@ -586,11 +593,10 @@ describe('WordController (e2e)', () => {
     await utils.uploadAudio(auth.token, word.id);
 
     await api.get('/api/words/' + word.id + '/audio')
-      .expect(302)
-      .then((res) => request.get(res.header.location))
-      .then((body) => {
+      .expect(200)
+      .then((res) => {
         const originalFile = fs.readFileSync('./test/audio.mp3').toString();
-        expect(body).toEqual(originalFile);
+        expect(res.text).toEqual(originalFile);
       });
   });
 

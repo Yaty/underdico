@@ -179,6 +179,10 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async findWordById(id: string): Promise<Word> {
+    if (BaseService.isInvalidObjectId(id)) {
+      throw new NotFoundException('Word not found');
+    }
+
     const words = await this.wordModel
       .aggregate()
       .match({
@@ -216,12 +220,12 @@ export class WordService extends BaseService<Word, WordDto> {
       throw new NotFoundException();
     }
 
-    return this.findWordById(BaseService.objectIdToString(word._id));
+    return this.findWordById(word._id);
   }
 
   async getRandomWordId(locale?: string): Promise<string> {
     const word = await this.getRandomWord(locale);
-    return BaseService.objectIdToString(word._id);
+    return WordService.objectIdToString(word._id);
   }
 
   async getDailyWordId(locale?: string): Promise<string> {

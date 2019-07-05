@@ -20,6 +20,7 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       status: 'status',
       locale: 'locale',
       rounds: 'rounds',
+      usernames: 'usernames',
     });
   }
 

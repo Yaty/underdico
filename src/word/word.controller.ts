@@ -56,6 +56,7 @@ import { StorageService } from '../shared/storage/storage.service';
 import { DeleteAudioParams } from './dto/delete-audio-params.dto';
 import { UpdateWordDto } from './dto/update-word.dto';
 import { Pagination } from '../shared/decorators/pagination.decorator';
+import * as request from 'request';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -263,10 +264,11 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'DownloadWordAudio'))
   async downloadAudio(
     @Param() params: DownloadAudioParams,
+    @Request() req,
     @Response() res,
   ): Promise<void> {
     const word = await this.wordService.findWordById(params.wordId);
-    res.redirect(this.storageService.getFileUrl(WordService.objectIdToString(word._id)));
+    req.pipe(request(this.storageService.getFileUrl(WordService.objectIdToString(word._id)))).pipe(res);
   }
 
   @Delete(':wordId/audio')

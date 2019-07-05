@@ -7,7 +7,6 @@ import { RegisterDto } from '../src/user/dto/register.dto';
 import { UserDto } from '../src/user/dto/user.dto';
 import { configure } from '../src/app.configuration';
 import TestUtils from './utils';
-import * as request from 'request-promise-native';
 import * as fs from 'fs';
 
 describe('UserController (e2e)', () => {
@@ -102,6 +101,15 @@ describe('UserController (e2e)', () => {
       });
   });
 
+  it('/users/{userId} (GET) returns 404 when not found', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+
+    await api.get('/api/users/blabla')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(404);
+  });
+
   it('/users/{userId} (GET) with karma', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
@@ -136,11 +144,10 @@ describe('UserController (e2e)', () => {
     await utils.uploadAvatar(auth.token, auth.userId);
 
     await api.get('/api/users/' + auth.userId + '/avatar')
-      .expect(302)
-      .then((res) => request.get(res.header.location))
-      .then((body) => {
+      .expect(200)
+      .then((res) => {
         const originalFile = fs.readFileSync('./test/avatar.png').toString();
-        expect(body).toEqual(originalFile);
+        expect(res.body.toString()).toEqual(originalFile);
       });
   });
 

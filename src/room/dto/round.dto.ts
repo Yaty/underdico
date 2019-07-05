@@ -2,6 +2,9 @@ import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
 
 export class RoundDto {
   @ApiModelProperty()
+  readonly id: string;
+
+  @ApiModelProperty()
   readonly wordId: string;
 
   @ApiModelPropertyOptional()

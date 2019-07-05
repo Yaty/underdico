@@ -52,6 +52,7 @@ import { StorageService } from '../shared/storage/storage.service';
 import { UploadAvatarParams } from './dto/upload-avatar-params.dto';
 import { DownloadAvatarParams } from './dto/download-avatar-params.dto';
 import { DeleteAvatarParams } from './dto/delete-avatar-params.dto';
+import * as request from 'request';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
@@ -172,10 +173,11 @@ export class UserController {
   @ApiOperation(GetOperationId(User.modelName, 'DownloadAvatar'))
   async downloadAvatar(
     @Param() params: DownloadAvatarParams,
+    @Request() req,
     @Response() res,
   ): Promise<void> {
     const user = await this.userService.findUserById(params.userId);
-    res.redirect(this.storageService.getFileUrl(UserService.objectIdToString(user._id)));
+    req.pipe(request(this.storageService.getFileUrl(UserService.objectIdToString(user._id)))).pipe(res);
   }
 
   @Delete(':userId/avatar')

@@ -1,5 +1,5 @@
 import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class CreateRoomDto {
@@ -8,10 +8,14 @@ export class CreateRoomDto {
   @MinLength(3)
   readonly name: string;
 
-  @ApiModelPropertyOptional()
+  @ApiModelPropertyOptional({
+    minimum: 1,
+    maximum: 20,
+  })
   @IsOptional()
   @IsInt()
-  @IsPositive()
+  @Min(1)
+  @Max(20)
   readonly maxPlayers?: number;
 
   @ApiModelPropertyOptional()
@@ -29,4 +33,14 @@ export class CreateRoomDto {
     optional: true,
   })
   readonly locale?: string;
+
+  @ApiModelPropertyOptional({
+    minimum: 5,
+    maximum: 5 * 60,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(5 * 60)
+  readonly timeout?: number;
 }

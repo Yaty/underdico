@@ -3,8 +3,11 @@ import { BaseModel, schemaOptions } from '../../shared/base.model';
 import { User } from '../../user/models/user.model';
 import { RoomStatus } from './room-status.enum';
 import { Word } from '../../word/models/word.model';
+import { Types } from 'mongoose';
 
 class Round {
+  '_id': Types.ObjectId;
+
   @prop({
     required: false,
     ref: Word,
@@ -70,6 +73,7 @@ export class Room extends BaseModel<Room> {
 
   @prop({
     default: 10,
+    max: 20,
   })
   maxPlayers: number;
 
@@ -127,6 +131,11 @@ export class Room extends BaseModel<Room> {
     items: Round,
   })
   rounds: Round[];
+
+  @prop({
+    default: 30,
+  })
+  timeout: number;
 
   static get model(): ModelType<Room> {
     return new Room().getModelForClass(Room, {
