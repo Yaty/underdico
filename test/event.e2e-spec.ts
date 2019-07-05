@@ -8,6 +8,7 @@ import { INestApplication } from '@nestjs/common';
 import * as pEvent from 'p-event';
 import { RoomService } from '../src/room/room.service';
 import { WordService } from '../src/word/word.service';
+import * as uuid from 'uuid/v4';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -150,6 +151,44 @@ describe('Event (E2E)', () => {
     });
 
     await pEvent(ownerClient, 'roomStarted');
+    await pEvent(ownerClient, 'newRound');
     await pEvent(ownerClient, 'timeout');
   }, 10000);
+
+  it('handles wrong proposals', async (): Promise<void> => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    await app.listen(3008);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3008', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'roomStarted');
+    await pEvent(ownerClient, 'newRound');
+
+    ownerClient.emit('play', {
+      roomId,
+      proposal: uuid(),
+    });
+
+    const payload: any = await pEvent(ownerClient, 'wrongProposal');
+    expect(payload.playerId).toEqual(ownerAuth.userId);
+    expect(payload.nextPlayerId).toEqual(ownerAuth.userId);
+  });
 });

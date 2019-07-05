@@ -157,7 +157,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     if (currentPlayerId) {
       // Get the next player in the order of subscription
       nextPlayerId = (room.playersIds[
-        (room.playersIds.findIndex((v) => v === RoomService.toObjectId(currentPlayerId)) + 1)
+        (room.playersIds.findIndex((v) => v.toString() === currentPlayerId.toString()) + 1)
         % room.playersIds.length
       ]);
     } else {
@@ -225,7 +225,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     const round = room.rounds[room.rounds.length - 1];
 
-    if (BaseService.objectIdToString(round.currentPlayerId) !== BaseService.objectIdToString(player._id)) {
+    if (round.currentPlayerId.toString() !== player._id.toString()) {
       throw new WsException('This is not your turn to play');
     }
 
@@ -273,7 +273,10 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('Room not found');
     }
 
-    const currentPlayerIndex = room.playersIds.findIndex((playerId) => playerId === room.rounds[room.rounds.length - 1].currentPlayerId);
+    const currentPlayerIndex = room.playersIds.findIndex(
+      (playerId) => playerId.toString() === room.rounds[room.rounds.length - 1].currentPlayerId.toString(),
+    );
+
     return room.playersIds[currentPlayerIndex + 1 % room.playersIds.length];
   }
 
