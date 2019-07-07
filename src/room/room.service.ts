@@ -77,7 +77,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     };
   }
 
-  async createRoom(dto: CreateRoomDto, owner: User): Promise<RoomDto> {
+  async createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
     const createdRoom = await this.roomModel.create({
       ...dto,
       playersIds: [owner._id],
@@ -196,7 +196,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
         word.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
         'i',
       ),
-      '',
+      'X',
     );
 
     await this.eventGateway.startNextRound(
@@ -289,11 +289,15 @@ export class RoomService extends BaseService<Room, RoomDto> {
         const round = room.rounds.find((r) => r._id.toString() === roundId.toString());
 
         if (round.currentPlayerId.toString() === playerId.toString() && !round.terminatedAt) {
+          const nextPlayerId = await this.getNextPlayerId(roomId);
+
           this.eventGateway.timeout(
             roomId,
             playerId.toString(),
-            await this.getNextPlayerId(roomId),
+            nextPlayerId,
           );
+
+          await this.handleTimeout(roomId, roundId, RoomService.toObjectId(nextPlayerId));
         }
       } catch (err) {
         console.error(err, 'Error while handling round timeout');

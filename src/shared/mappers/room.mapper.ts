@@ -21,6 +21,7 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       locale: 'locale',
       rounds: 'rounds',
       usernames: 'usernames',
+      timeout: 'timeout',
     });
   }
 

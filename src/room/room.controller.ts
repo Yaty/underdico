@@ -50,7 +50,7 @@ export class RoomController {
     @Res() res,
   ): Promise<void> {
     const room = await this.roomService.createRoom(dto, req.user);
-    res.set('Location', `${req.protocol}://${req.get('host')}/api/rooms/${room._id}`);
+    res.set('Location', `https://${req.get('host')}/api/rooms/${room._id}`);
     res.status(201).json(this.roomService.mapper.map(room));
   }
 }

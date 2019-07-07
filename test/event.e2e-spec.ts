@@ -153,7 +153,8 @@ describe('Event (E2E)', () => {
     await pEvent(ownerClient, 'roomStarted');
     await pEvent(ownerClient, 'newRound');
     await pEvent(ownerClient, 'timeout');
-  }, 10000);
+    await pEvent(ownerClient, 'timeout');
+  }, 30000);
 
   it('handles wrong proposals', async (): Promise<void> => {
     const owner = await utils.createUser();
@@ -190,5 +191,63 @@ describe('Event (E2E)', () => {
     const payload: any = await pEvent(ownerClient, 'wrongProposal');
     expect(payload.playerId).toEqual(ownerAuth.userId);
     expect(payload.nextPlayerId).toEqual(ownerAuth.userId);
+  });
+
+  it('should give the nextPlayerId on wrongProposal', async (): Promise<void> => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    const anotherPlayer = await utils.createUser();
+    const anotherAuth = await utils.login(anotherPlayer);
+
+    await app.listen(3009);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3009', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const anotherClient = socketIOClient.connect('ws://localhost:3009', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + anotherAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    anotherClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    const [, newRound]: any[] = await Promise.all([
+      pEvent(ownerClient, 'roomStarted'),
+      pEvent(ownerClient, 'newRound'),
+      pEvent(anotherClient, 'roomStarted'),
+      pEvent(anotherClient, 'newRound'),
+    ]);
+
+    const currentPlayer = newRound.nextPlayerId === ownerAuth.userId ? ownerClient : anotherClient;
+    const otherPlayerId = newRound.nextPlayerId === ownerAuth.userId ?  anotherAuth.userId : ownerAuth.userId;
+
+    currentPlayer.emit('play', {
+      roomId,
+      proposal: uuid(),
+    });
+
+    const payload: any = await pEvent(ownerClient, 'wrongProposal');
+    expect(payload.playerId).toEqual(newRound.nextPlayerId);
+    expect(payload.nextPlayerId).toEqual(otherPlayerId);
   });
 });
