@@ -6,6 +6,9 @@ import { CustomValidationError } from './shared/errors/custom-validation.error';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { RedisIoAdapter } from './shared/adapters/redis-io.adapter';
 import { Observable } from 'rxjs';
+import { json } from 'body-parser';
+
+const jsonMiddleware = json();
 
 class ExposeHeadersInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {

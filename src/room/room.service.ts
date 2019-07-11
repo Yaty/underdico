@@ -135,11 +135,11 @@ export class RoomService extends BaseService<Room, RoomDto> {
       } catch (err) {
         console.error(err, 'Error while launching first round');
       }
-    }, 1000);
+    }, 100);
   }
 
   async startNextRound(roomId: string): Promise<void> {
-    const room = await this.roomModel.findById(roomId).lean().exec();
+    const room = await this.findById(roomId);
 
     if (!room) {
       throw new WsException('Room not found');
@@ -151,19 +151,9 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new WsException('No word');
     }
 
-    const currentPlayerId: string | null = room.playersIds.length > 0 ? room.playersIds[room.playersIds.length - 1] : null;
-    let nextPlayerId: Types.ObjectId;
-
-    if (currentPlayerId) {
-      // Get the next player in the order of subscription
-      nextPlayerId = (room.playersIds[
-        (room.playersIds.findIndex((v) => v.toString() === currentPlayerId.toString()) + 1)
-        % room.playersIds.length
-      ]);
-    } else {
-      // For the first one get a random player
-      nextPlayerId = room.playersIds[Math.round(Math.random() * room.playersIds.length)];
-    }
+    const currentPlayerId = RoomService.toObjectId(
+      room.playersIds[Math.floor(Math.random() * room.playersIds.length)].toString(),
+    );
 
     const updatedRoom: Room = await this.roomModel.findOneAndUpdate({
       _id: roomId,
@@ -171,7 +161,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       $push: {
         rounds: {
           wordId: word._id,
-          currentPlayerId: nextPlayerId,
+          currentPlayerId,
           createdAt: new Date(),
         },
       },
@@ -203,13 +193,13 @@ export class RoomService extends BaseService<Room, RoomDto> {
       roomId,
       obfuscatedWord,
       obfuscatedDescription,
-      nextPlayerId.toString(),
+      currentPlayerId.toString(),
     );
 
     await this.handleTimeout(
       roomId,
       newRoundId,
-      nextPlayerId,
+      currentPlayerId,
     );
   }
 
@@ -252,7 +242,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
         } catch (err) {
           console.error(err, 'Error while starting next round after good proposal.');
         }
-      }, 1000);
+      }, 100);
 
       return [true];
     }
@@ -264,10 +254,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async getNextPlayerId(roomId: string): Promise<string> {
-    const room = await this.roomModel
-      .findById(roomId)
-      .lean()
-      .exec();
+    const room = await this.findById(roomId);
 
     if (!room) {
       throw new WsException('Room not found');
@@ -277,7 +264,16 @@ export class RoomService extends BaseService<Room, RoomDto> {
       (playerId) => playerId.toString() === room.rounds[room.rounds.length - 1].currentPlayerId.toString(),
     );
 
-    return room.playersIds[currentPlayerIndex + 1 % room.playersIds.length];
+    const nextPlayerId = room.playersIds[(currentPlayerIndex + 1) % room.playersIds.length];
+    const key: string = `rounds.${room.rounds.length - 1}.currentPlayerId`;
+
+    await this.roomModel.updateOne({
+      _id: roomId,
+    }, {
+      [key]: nextPlayerId,
+    }).exec();
+
+    return nextPlayerId.toString();
   }
 
   async handleTimeout(roomId: string, roundId: Types.ObjectId, playerId: Types.ObjectId): Promise<void> {

@@ -264,11 +264,10 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'DownloadWordAudio'))
   async downloadAudio(
     @Param() params: DownloadAudioParams,
-    @Request() req,
     @Response() res,
   ): Promise<void> {
     const word = await this.wordService.findWordById(params.wordId);
-    req.pipe(request(this.storageService.getFileUrl(WordService.objectIdToString(word._id)))).pipe(res);
+    request(this.storageService.getFileUrl(WordService.objectIdToString(word._id))).pipe(res);
   }
 
   @Delete(':wordId/audio')

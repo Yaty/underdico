@@ -20,6 +20,7 @@ describe('UserController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
     configure(app);
     await app.init();
     api = supertest(app.getHttpServer());

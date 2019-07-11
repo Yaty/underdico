@@ -156,14 +156,85 @@ describe('Event (E2E)', () => {
     await pEvent(ownerClient, 'timeout');
   }, 30000);
 
+  it('should handle timeout and allow the next player id to play', async () => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+
+    const other = await utils.createUser();
+    const otherAuth = await utils.login(other);
+
+    const roomId = await utils.createRoom(ownerAuth.token, {
+      timeout: 5,
+    });
+
+    await app.listen(3008);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3008', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const otherClient = socketIOClient.connect('ws://localhost:3008', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + otherAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    otherClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    let currentPlayerId;
+
+    await pEvent(ownerClient, 'roomStarted');
+    const newRound: any = await pEvent(ownerClient, 'newRound');
+    currentPlayerId = newRound.nextPlayerId;
+
+    const timeoutA: any = await pEvent(ownerClient, 'timeout');
+    expect(timeoutA.playerId).toEqual(currentPlayerId);
+    expect(timeoutA.nextPlayerId !== currentPlayerId).toBeTruthy();
+    currentPlayerId = timeoutA.nextPlayerId;
+
+    const timeoutB: any = await pEvent(ownerClient, 'timeout');
+    expect(timeoutB.playerId).toEqual(currentPlayerId);
+    expect(timeoutB.nextPlayerId !== currentPlayerId).toBeTruthy();
+    currentPlayerId = timeoutB.nextPlayerId;
+
+    const client = currentPlayerId === ownerAuth.userId ? ownerClient : otherClient;
+
+    const room = await roomService.findById(roomId);
+    const goodWordId = room.rounds[room.rounds.length - 1].wordId as unknown as string;
+    const goodWordName = (await wordService.findWordById(goodWordId)).name;
+
+    client.emit('play', {
+      roomId,
+      proposal: goodWordName,
+    });
+
+    await pEvent(otherClient, 'goodProposal');
+  }, 30000);
+
   it('handles wrong proposals', async (): Promise<void> => {
     const owner = await utils.createUser();
     const ownerAuth = await utils.login(owner);
     const roomId = await utils.createRoom(ownerAuth.token);
 
-    await app.listen(3008);
+    await app.listen(3009);
 
-    const ownerClient = socketIOClient.connect('ws://localhost:3008', {
+    const ownerClient = socketIOClient.connect('ws://localhost:3009', {
       // @ts-ignore
       extraHeaders: {
         Authorization: 'Bearer ' + ownerAuth.token,
@@ -201,16 +272,16 @@ describe('Event (E2E)', () => {
     const anotherPlayer = await utils.createUser();
     const anotherAuth = await utils.login(anotherPlayer);
 
-    await app.listen(3009);
+    await app.listen(3010);
 
-    const ownerClient = socketIOClient.connect('ws://localhost:3009', {
+    const ownerClient = socketIOClient.connect('ws://localhost:3010', {
       // @ts-ignore
       extraHeaders: {
         Authorization: 'Bearer ' + ownerAuth.token,
       },
     });
 
-    const anotherClient = socketIOClient.connect('ws://localhost:3009', {
+    const anotherClient = socketIOClient.connect('ws://localhost:3010', {
       // @ts-ignore
       extraHeaders: {
         Authorization: 'Bearer ' + anotherAuth.token,
@@ -250,4 +321,70 @@ describe('Event (E2E)', () => {
     expect(payload.playerId).toEqual(newRound.nextPlayerId);
     expect(payload.nextPlayerId).toEqual(otherPlayerId);
   });
+
+  it('should start a new round with a different nextPlayerId on goodProposal', async (): Promise<void> => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    const anotherPlayer = await utils.createUser();
+    const anotherAuth = await utils.login(anotherPlayer);
+
+    await app.listen(3011);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3011', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const anotherClient = socketIOClient.connect('ws://localhost:3011', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + anotherAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    anotherClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    const iterations = 50;
+    let ownerTurns = 0;
+
+    for (let i = 0; i < iterations; i++) {
+      const currentRound: any = await pEvent(ownerClient, 'newRound');
+
+      const currentPlayer = currentRound.nextPlayerId === ownerAuth.userId ? ownerClient : anotherClient;
+
+      if (currentRound.nextPlayerId === ownerAuth.userId) {
+        ownerTurns++;
+      }
+
+      const room = await roomService.findById(roomId);
+      const goodWordId = room.rounds[room.rounds.length - 1].wordId as unknown as string;
+      const goodWordName = (await wordService.findWordById(goodWordId)).name;
+
+      currentPlayer.emit('play', {
+        roomId,
+        proposal: goodWordName,
+      });
+
+      await pEvent(ownerClient, 'goodProposal');
+    }
+
+    expect(ownerTurns / iterations).toBeGreaterThan(0.35);
+    expect(ownerTurns / iterations).toBeLessThan(0.65);
+  }, 20000);
 });

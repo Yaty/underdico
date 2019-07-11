@@ -173,11 +173,10 @@ export class UserController {
   @ApiOperation(GetOperationId(User.modelName, 'DownloadAvatar'))
   async downloadAvatar(
     @Param() params: DownloadAvatarParams,
-    @Request() req,
     @Response() res,
   ): Promise<void> {
     const user = await this.userService.findUserById(params.userId);
-    req.pipe(request(this.storageService.getFileUrl(UserService.objectIdToString(user._id)))).pipe(res);
+    request(this.storageService.getFileUrl(UserService.objectIdToString(user._id))).pipe(res);
   }
 
   @Delete(':userId/avatar')
