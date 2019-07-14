@@ -1,6 +1,6 @@
 import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { ModelType } from 'typegoose';
+import { InstanceType, ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
 import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 import { BaseService } from '../shared/base.service';
@@ -13,14 +13,16 @@ import { UserMapper } from '../shared/mappers/user.mapper';
 import { UserDto } from './dto/user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { WordService } from '../word/word.service';
+import { RoomService } from '../room/room.service';
 
 @Injectable()
 export class UserService extends BaseService<User, UserDto> {
   constructor(
     @InjectModel(User.modelName) private readonly userModel: ModelType<User>,
     mapper: UserMapper,
-    readonly authService: AuthService,
-    readonly wordService: WordService,
+    private readonly authService: AuthService,
+    private readonly wordService: WordService,
+    private readonly roomService: RoomService,
   ) {
     super(userModel, mapper);
   }
@@ -73,7 +75,7 @@ export class UserService extends BaseService<User, UserDto> {
     newUser.locale = dto.locale;
 
     const user = await this.userModel.create(newUser);
-    return user.toJSON();
+    return this.findUserById(user.id);
   }
 
   async login(dto: CredentialsDto): Promise<TokenResponseDto> {
@@ -132,7 +134,7 @@ export class UserService extends BaseService<User, UserDto> {
     return this.findUserById(userId);
   }
 
-  async findUserById(userId: string): Promise<User> {
+  async findUserById(userId: string): Promise<InstanceType<User>> {
     if (BaseService.isInvalidObjectId(userId)) {
       throw new NotFoundException('User not found');
     }
@@ -146,7 +148,14 @@ export class UserService extends BaseService<User, UserDto> {
       throw new NotFoundException('User not found');
     }
 
-    user.karma = await this.wordService.getUserWordsTotalScore(userId);
+    const [karma, score] = await Promise.all([
+      this.wordService.getUserWordsTotalScore(userId),
+      this.roomService.getUserScore(userId),
+    ]);
+
+    user.karma = karma;
+    user.score = score;
+
     return user;
   }
 }

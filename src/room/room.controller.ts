@@ -10,6 +10,10 @@ import { Roles } from '../shared/decorators/roles.decorator';
 import { UserRole } from '../user/models/user-role.enum';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../shared/guards/roles.guard';
+import { RoomStatus } from './models/room-status.enum';
+import { Where } from '../shared/decorators/where.decorator';
+import { Sort } from '../shared/decorators/sort.decorator';
+import { User } from '../shared/decorators/user.decorator';
 
 @Controller('rooms')
 @ApiUseTags(Room.modelName)
@@ -23,19 +27,23 @@ export class RoomController {
   @ApiOkResponse({ type: RoomDto, isArray: true })
   @ApiOperation(GetOperationId(Room.modelName, 'GetRooms'))
   async getRooms(
-    @Pagination() range,
     @Res() res,
+    @Pagination() range,
+    @Where() where,
+    @Sort() sort,
   ): Promise<void> {
     const { skip, take, limit } = range;
 
     const {
       rooms,
       count,
-    } = await this.roomService.getRooms(skip, take);
+    } = await this.roomService.getRooms(skip, take, {
+      ...where,
+      status:  RoomStatus.Created,
+    }, sort);
 
     res.set('Content-Range', `${skip}-${skip + rooms.length - 1}/${count}`);
     res.set('Accept-Range', `${Room.modelName} ${limit}`);
-
     res.json(this.roomService.mapper.mapArray(rooms));
   }
 
@@ -47,9 +55,10 @@ export class RoomController {
   async createRoom(
     @Body() dto: CreateRoomDto,
     @Req() req,
+    @User() user,
     @Res() res,
   ): Promise<void> {
-    const room = await this.roomService.createRoom(dto, req.user);
+    const room = await this.roomService.createRoom(dto, user);
     res.set('Location', `https://${req.get('host')}/api/rooms/${room._id}`);
     res.status(201).json(this.roomService.mapper.map(room));
   }

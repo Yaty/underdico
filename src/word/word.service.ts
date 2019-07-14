@@ -10,7 +10,7 @@ import { WordMapper } from '../shared/mappers/word.mapper';
 import { Vote } from '../vote/models/vote.model';
 import { VoteService } from '../vote/vote.service';
 import { UpdateWordDto } from './dto/update-word.dto';
-import { Sort } from './interfaces/sort.interface';
+import { Sort } from '../shared/decorators/sort.decorator';
 
 @Injectable()
 export class WordService extends BaseService<Word, WordDto> {
@@ -138,7 +138,7 @@ export class WordService extends BaseService<Word, WordDto> {
       });
     }
 
-    if (typeof take === 'number' && take > 0) {
+    if (typeof take === 'number' && take > 0 && take !== Infinity) {
       pipeline.push({
         $limit: take,
       });
@@ -289,5 +289,13 @@ export class WordService extends BaseService<Word, WordDto> {
     }
 
     return res[0].total;
+  }
+
+  async findUserWords(userId: string): Promise<Word[]> {
+    const {words} = await this.getAggregatedWords(0, Infinity, {
+      userId: WordService.toObjectId(userId),
+    });
+
+    return words;
   }
 }

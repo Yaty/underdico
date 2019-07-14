@@ -16,6 +16,7 @@ export class UserMapper extends BaseMapper<UserDto, User> {
       updatedAt: 'updatedAt',
       karma: 'karma',
       locale: 'locale',
+      score: 'score',
     });
   }
 

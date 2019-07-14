@@ -19,6 +19,8 @@ describe('Event (E2E)', () => {
   let utils: TestUtils;
   let api;
 
+  const apps = [];
+
   beforeEach(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
@@ -31,11 +33,15 @@ describe('Event (E2E)', () => {
     wordService = moduleFixture.get<WordService>(WordService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
+    apps.push(app);
   });
 
-  afterEach(async () => {
-    await app.close();
-    await wait(1000);
+  afterAll(async () => {
+    await wait(35000);
+
+    for (const a of apps) {
+      await a.close();
+    }
   });
 
   it('should connect', async () => {
@@ -152,7 +158,6 @@ describe('Event (E2E)', () => {
 
     await pEvent(ownerClient, 'roomStarted');
     await pEvent(ownerClient, 'newRound');
-    await pEvent(ownerClient, 'timeout');
     await pEvent(ownerClient, 'timeout');
   }, 30000);
 
@@ -386,5 +391,121 @@ describe('Event (E2E)', () => {
 
     expect(ownerTurns / iterations).toBeGreaterThan(0.35);
     expect(ownerTurns / iterations).toBeLessThan(0.65);
+  }, 20000);
+
+  it('returns playerScore on goodProposal', async () => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    await app.listen(3012);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3012', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newRound');
+
+    const room = await roomService.findById(roomId);
+    const goodWordId = room.rounds[room.rounds.length - 1].wordId as unknown as string;
+    const goodWordName = (await wordService.findWordById(goodWordId)).name;
+
+    ownerClient.emit('play', {
+      roomId,
+      proposal: goodWordName,
+    });
+
+    const res: any = await pEvent(ownerClient, 'goodProposal');
+    expect(res.playerId).toEqual(ownerAuth.userId);
+    expect(res.playerScore).toEqual(1);
+  }, 20000);
+
+  it('returns playerScore on wrongProposal', async () => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    await app.listen(3013);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3013', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    ownerClient.emit('startRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newRound');
+
+    ownerClient.emit('play', {
+      roomId,
+      proposal: 'wrong',
+    });
+
+    const res: any = await pEvent(ownerClient, 'wrongProposal');
+    expect(res.playerId).toEqual(ownerAuth.userId);
+    expect(res.playerScore).toEqual(0);
+  }, 20000);
+
+  it('removes a player of room when brutal disconnection', async () => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token);
+
+    const other = await utils.createUser();
+    const otherAuth = await utils.login(other);
+
+    await app.listen(3014);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3014', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const otherClient = socketIOClient.connect('ws://localhost:3014', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + otherAuth.token,
+      },
+    });
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+    });
+
+    otherClient.emit('joinRoom', {
+      roomId,
+    });
+
+    await pEvent(ownerClient, 'newPlayer');
+
+    otherClient.disconnect();
+
+    const event: any = await pEvent(ownerClient, 'playerRemoved');
+    expect(event.id).toEqual(otherAuth.userId);
   }, 20000);
 });

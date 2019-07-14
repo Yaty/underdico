@@ -113,4 +113,10 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
 
     return BaseService.objectIdToString(bestWords[0]._id);
   }
+
+  findUserVotes(userId: string): Promise<Vote[]> {
+    return this.voteModel.find({
+      userId,
+    }).exec();
+  }
 }

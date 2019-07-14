@@ -11,7 +11,6 @@ import {
   Patch,
   Post,
   Put,
-  Request,
   Response,
   UploadedFile,
   UseGuards,
@@ -53,6 +52,11 @@ import { UploadAvatarParams } from './dto/upload-avatar-params.dto';
 import { DownloadAvatarParams } from './dto/download-avatar-params.dto';
 import { DeleteAvatarParams } from './dto/delete-avatar-params.dto';
 import * as request from 'request';
+import { SummaryDto } from './dto/summary.dto';
+import { RoomService } from '../room/room.service';
+import { VoteService } from '../vote/vote.service';
+import { WordService } from '../word/word.service';
+import { User as GetUser } from '../shared/decorators/user.decorator';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
@@ -61,6 +65,9 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly storageService: StorageService,
+    private readonly roomService: RoomService,
+    private readonly voteService: VoteService,
+    private readonly wordService: WordService,
   ) {}
 
   @Post()
@@ -116,6 +123,32 @@ export class UserController {
     return this.userService.mapper.map(user);
   }
 
+  @Get(':userId/summary')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOkResponse({ type: UserDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(User.modelName, 'GetSummary'))
+  @ApiImplicitParam({ name: 'userId', required: true })
+  async getUserSummary(
+    @Param() params: FindByIdParamsDto,
+  ): Promise<SummaryDto> {
+    const [user, rooms, votes, words] = await Promise.all([
+      this.userService.findUserById(params.userId),
+      this.roomService.findUserRooms(params.userId),
+      this.voteService.findUserVotes(params.userId),
+      this.wordService.findUserWords(params.userId),
+    ]);
+
+    return {
+      user: this.userService.mapper.map(user),
+      rooms: this.roomService.mapper.mapArray(rooms),
+      votes: this.voteService.mapper.mapArray(votes),
+      words: this.wordService.mapper.mapArray(words, WordService.toObjectId(params.userId)),
+    };
+  }
+
   @Patch(':userId')
   @Roles(UserRole.Admin, UserRole.User)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -127,10 +160,10 @@ export class UserController {
   async update(
     @Param() params: UpdateParamsDto,
     @Body() dto: UpdateUserDto,
-    @Request() req,
+    @GetUser() user,
   ): Promise<UserDto> {
-    const user = await this.userService.updateUser(params.userId, dto, req.user);
-    return this.userService.mapper.map(user);
+    const updatedUser = await this.userService.updateUser(params.userId, dto, user);
+    return this.userService.mapper.map(updatedUser);
   }
 
   @Put(':userId/avatar')
@@ -147,7 +180,7 @@ export class UserController {
   @ApiImplicitFile({ name: 'file', required: true })
   async uploadAvatar(
     @Param() params: UploadAvatarParams,
-    @Request() req,
+    @GetUser() authenticatedUser,
     @Response() res,
     @UploadedFile() file,
   ): Promise<void> {
@@ -157,7 +190,7 @@ export class UserController {
 
     const user = await this.userService.findUserById(params.userId);
 
-    if (UserService.objectIdToString(user._id) !== UserService.objectIdToString(req.user._id)) {
+    if (UserService.objectIdToString(authenticatedUser._id) !== UserService.objectIdToString(user._id)) {
       throw new ForbiddenException();
     }
 
@@ -188,12 +221,12 @@ export class UserController {
   @ApiOperation(GetOperationId(User.modelName, 'DeleteAvatar'))
   async deleteAvatar(
     @Param() params: DeleteAvatarParams,
-    @Request() req,
+    @GetUser() authenticatedUser,
     @Response() res,
   ) {
     const user = await this.userService.findUserById(params.userId);
 
-    if (UserService.objectIdToString(user._id) !== UserService.objectIdToString(req.user._id)) {
+    if (UserService.objectIdToString(user._id) !== UserService.objectIdToString(authenticatedUser._id)) {
       throw new ForbiddenException();
     }
 

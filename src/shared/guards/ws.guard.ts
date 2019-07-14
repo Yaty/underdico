@@ -1,5 +1,3 @@
-// tslint:disable:no-console
-
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { AuthService } from '../auth/auth.service';
@@ -7,7 +5,7 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 import { User } from '../../user/models/user.model';
 import { Configuration } from '../configuration/configuration.enum';
 import { ConfigurationService } from '../configuration/configuration.service';
-import { ExtractJwt } from 'passport-jwt';
+import { ExtractJWTFromWs } from '../utilities/extract-jwt-ws.helper';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {
@@ -22,11 +20,7 @@ export class WsJwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext) {
     const client = context.switchToWs().getClient();
-
-    const authToken = ExtractJwt.fromAuthHeaderAsBearerToken()(client.handshake) ||
-      (client.handshake.query && client.handshake.query.jwt);
-
-    console.log('WS auth middleware, token :', authToken, ', id :', client.id);
+    const authToken = ExtractJWTFromWs(client);
     const jwtPayload: JwtPayload = jwt.verify(authToken, this.jwtSecret) as JwtPayload;
     const user: User = await this.authService.validateUser(jwtPayload);
     context.switchToWs().getData().user = user;

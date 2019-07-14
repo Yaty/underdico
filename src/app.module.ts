@@ -7,37 +7,38 @@ import { SharedModule } from './shared/shared.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigurationService } from './shared/configuration/configuration.service';
 import { Configuration } from './shared/configuration/configuration.enum';
-import { VoteModule } from './vote/vote.module';
 import { EventModule } from './event/event.module';
 import { RoomModule } from './room/room.module';
 import { RedisModule } from 'nestjs-redis';
 
 @Module({
   imports: [
-    SharedModule,
     MongooseModule.forRootAsync({
-      imports: [SharedModule],
-      useFactory: (configService: ConfigurationService) => ({
-        uri: configService.get(Configuration.MONGO_URI),
-        retryDelay: 500,
-        retryAttempts: 3,
-        useNewUrlParser: true,
-        useCreateIndex: true,
-        useFindAndModify: false,
-      }),
+      useFactory(configService: ConfigurationService) {
+        return {
+          uri: configService.get(Configuration.MONGO_URI),
+          retryDelay: 500,
+          retryAttempts: 3,
+          useNewUrlParser: true,
+          useCreateIndex: true,
+          useFindAndModify: false,
+        };
+      },
       inject: [ConfigurationService],
     }),
     RedisModule.forRootAsync({
-      useFactory: (configService: ConfigurationService) => ({
-        host: configService.get(Configuration.REDIS_HOST),
-        port: Number(configService.get(Configuration.REDIS_PORT)),
-        db: Number(configService.get(Configuration.REDIS_DB)),
-        keyPrefix: configService.get(Configuration.REDIS_PREFIX),
-      }),
+      useFactory(configService: ConfigurationService) {
+        return {
+          host: configService.get(Configuration.REDIS_HOST),
+          port: Number(configService.get(Configuration.REDIS_PORT)),
+          db: Number(configService.get(Configuration.REDIS_DB)),
+          keyPrefix: configService.get(Configuration.REDIS_PREFIX),
+        };
+      },
       inject: [ConfigurationService],
     }),
+    SharedModule,
     UserModule,
-    VoteModule,
     WordModule,
     EventModule,
     RoomModule,

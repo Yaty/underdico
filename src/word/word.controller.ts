@@ -57,6 +57,9 @@ import { DeleteAudioParams } from './dto/delete-audio-params.dto';
 import { UpdateWordDto } from './dto/update-word.dto';
 import { Pagination } from '../shared/decorators/pagination.decorator';
 import * as request from 'request';
+import { Where } from '../shared/decorators/where.decorator';
+import { Sort } from '../shared/decorators/sort.decorator';
+import { User } from '../shared/decorators/user.decorator';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -77,11 +80,12 @@ export class WordController {
   async create(
     @Request() req,
     @Response() res,
+    @User() user,
     @Body() dto: CreateWordDto,
   ): Promise<void> {
-    const word = await this.wordService.createWord(dto, req.user);
+    const word = await this.wordService.createWord(dto, user);
     res.set('Location', `${req.protocol}://${req.get('host')}/api/words/${word._id}`);
-    res.status(201).json(await this.wordService.mapper.map(word, req.user._id));
+    res.status(201).json(await this.wordService.mapper.map(word, user._id));
   }
 
   @Get()
@@ -93,30 +97,13 @@ export class WordController {
   @ApiImplicitQuery({ name: 'where', description: 'where filter', required: false })
   @ApiImplicitQuery({ name: 'sort', description: 'sort filter', required: false })
   async findAll(
-    @Request() req,
     @Response() res,
-    @Pagination() range?,
-    @Query('where') where?,
-    @Query('sort') sort?,
+    @User() user,
+    @Pagination() range,
+    @Where() where,
+    @Sort() sort,
   ): Promise<void> {
     const { skip, take, limit } = range;
-
-    if (sort) {
-      const [field, ordering] = sort.split(',');
-
-      sort = {
-        field,
-        ordering,
-      };
-    }
-
-    if (where) {
-      try {
-        where = JSON.parse(where);
-      } catch (err) {
-        throw new BadRequestException('Invalid where JSON format');
-      }
-    }
 
     const {
       words,
@@ -126,7 +113,7 @@ export class WordController {
     res.set('Content-Range', `${skip}-${skip + words.length - 1}/${count}`);
     res.set('Accept-Range', `${Word.modelName} ${limit}`);
 
-    const mappedWords = this.wordService.mapper.mapArray(words, req.user && req.user._id);
+    const mappedWords = this.wordService.mapper.mapArray(words, user && user._id);
     res.status(200).json(mappedWords);
   }
 
@@ -166,10 +153,10 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'FindById'))
   async findById(
     @Param('wordId') wordId,
-    @Request() req,
+    @User() user,
   ): Promise<WordDto> {
     const word = await this.wordService.findWordById(wordId);
-    return this.wordService.mapper.map(word, req.user && req.user._id);
+    return this.wordService.mapper.map(word, user && user._id);
   }
 
   @Patch(':wordId')
@@ -183,10 +170,10 @@ export class WordController {
   async updateById(
     @Param('wordId') wordId,
     @Body() dto: UpdateWordDto,
-    @Request() req,
+    @User() user,
   ): Promise<WordDto> {
-    const word = await this.wordService.updateWord(wordId, dto, req.user._id);
-    return this.wordService.mapper.map(word, req.user._id);
+    const word = await this.wordService.updateWord(wordId, dto, user._id);
+    return this.wordService.mapper.map(word, user._id);
   }
 
   @Post(':wordId/votes')
@@ -200,9 +187,9 @@ export class WordController {
   async createVote(
     @Param() params: CreateVoteParamsDto,
     @Body() dto: CreateVoteDto,
-    @Request() req,
+    @User() user,
   ): Promise<VoteDto> {
-    const vote = await this.wordService.createVote(params.wordId, dto.value, req.user);
+    const vote = await this.wordService.createVote(params.wordId, dto.value, user);
     return this.voteMapper.map(vote);
   }
 
@@ -218,9 +205,9 @@ export class WordController {
   async updateVote(
     @Param() params: UpdateVoteParamsDto,
     @Body() dto: CreateVoteDto,
-    @Request() req,
+    @User() user,
   ): Promise<VoteDto> {
-    const vote = await this.wordService.updateVote(params.wordId, params.voteId, dto.value, req.user);
+    const vote = await this.wordService.updateVote(params.wordId, params.voteId, dto.value, user);
     return this.voteMapper.map(vote);
   }
 
@@ -238,8 +225,8 @@ export class WordController {
   @ApiImplicitFile({ name: 'file', required: true })
   async uploadAudio(
     @Param() params: UploadAudioParams,
-    @Request() req,
     @Response() res,
+    @User() user,
     @UploadedFile() file,
   ): Promise<void> {
     if (file.mimetype !== 'audio/mpeg') {
@@ -248,7 +235,7 @@ export class WordController {
 
     const word = await this.wordService.findWordById(params.wordId);
 
-    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(req.user._id)) {
+    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(user._id)) {
       throw new ForbiddenException();
     }
 
@@ -279,12 +266,12 @@ export class WordController {
   @ApiOperation(GetOperationId(Word.modelName, 'DeleteWordAudio'))
   async deleteAudio(
     @Param() params: DeleteAudioParams,
-    @Request() req,
+    @User() user,
     @Response() res,
   ) {
     const word = await this.wordService.findWordById(params.wordId);
 
-    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(req.user._id)) {
+    if (WordService.objectIdToString(word.userId) !== WordService.objectIdToString(user._id)) {
       throw new ForbiddenException();
     }
 

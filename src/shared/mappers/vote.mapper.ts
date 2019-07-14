@@ -22,6 +22,6 @@ export class VoteMapper extends BaseMapper<VoteDto, Vote> {
   }
 
   public mapArray(input: Vote[]): VoteDto[] {
-    return input.map(this.map);
+    return input.map((vote) => this.map(vote));
   }
 }

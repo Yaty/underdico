@@ -2,12 +2,15 @@ import { Types } from 'mongoose';
 import { InstanceType, ModelType } from 'typegoose';
 import { BaseMapper } from './mappers/base.mapper';
 import { BaseModel, BaseModelDto } from './base.model';
+import { EventEmitter } from 'events';
 
-export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> {
+export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> extends EventEmitter {
   protected constructor(
     public model: ModelType<T>,
     public mapper: BaseMapper<K, T>,
-  ) {}
+  ) {
+    super();
+  }
 
   private get modelName(): string {
     return this.model.modelName;

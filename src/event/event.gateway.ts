@@ -1,29 +1,53 @@
 // tslint:disable:no-console
 
-import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Client, Server, Socket } from 'socket.io';
+import { OnGatewayConnection, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { LeaveRoomDto } from './dto/leave-room.dto';
-import { forwardRef, Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from '../shared/guards/ws.guard';
 import { StartRoomDto } from './dto/start-room.dto';
 import { RoomService } from '../room/room.service';
 import { PlayDto } from './dto/play.dto';
+import { ExtractJWTFromWs } from '../shared/utilities/extract-jwt-ws.helper';
+import { ExtractUserIdFromJWT } from '../shared/utilities/extract-user-id-from-jwt.helper';
+import { UserService } from '../user/user.service';
+import { Types } from 'mongoose';
 
 @WebSocketGateway()
-export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class EventGateway implements OnGatewayConnection {
   constructor(
-    @Inject(forwardRef(() => RoomService)) private readonly roomService: RoomService,
-  ) {}
+    private readonly roomService: RoomService,
+    private readonly userService: UserService,
+  ) {
+    this.listenToRoomService();
+  }
 
   @WebSocketServer()
   private readonly server: Server;
 
+  private listenToRoomService() {
+    this.roomService.on('startNextRound', ({
+     roomId,
+     obfuscatedWord,
+     obfuscatedDescription,
+     currentPlayerId,
+    }) => {
+      this.startNextRound(roomId, obfuscatedWord, obfuscatedDescription, currentPlayerId);
+    });
+
+    this.roomService.on('timeout', ({
+      roomId,
+      playerId,
+      nextPlayerId,
+    }) => {
+      this.timeout(roomId, playerId, nextPlayerId);
+    });
+  }
+
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('joinRoom')
   async joinRoom(socket: Socket, dto: JoinRoomDto): Promise<void> {
-    console.log('joinRoom', socket.id, dto.roomId);
-
     try {
       await this.roomService.addPlayer(dto);
 
@@ -42,13 +66,15 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('leaveRoom')
   async leaveRoom(socket: Socket, dto: LeaveRoomDto): Promise<void> {
-    console.log('leaveRoom', socket.id, dto.roomId);
-
     socket.leave(dto.roomId);
 
     this.server.to(dto.roomId).emit('playerRemoved', {
       id: dto.user._id,
     });
+
+    setTimeout(() => {
+      socket.disconnect(true);
+    }, 1000);
 
     try {
       await this.roomService.removePlayer(dto);
@@ -60,8 +86,6 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('startRoom')
   async startRoom(socket: Socket, dto: StartRoomDto): Promise<void> {
-    console.log('startRoom', socket.id, dto.roomId);
-
     try {
       await this.roomService.startRoom(dto);
       this.server.to(dto.roomId).emit('roomStarted');
@@ -73,22 +97,23 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('play')
   async play(socket: Socket, dto: PlayDto): Promise<void> {
-    console.log('play', socket.id, dto.roomId, dto.proposal);
-
     try {
       const [
         isCorrectProposal,
+        playerScore,
         nextPlayerId,
       ] = await this.roomService.checkProposal(dto, dto.user);
 
       if (isCorrectProposal) {
         this.server.to(dto.roomId).emit('goodProposal', {
           playerId: dto.user._id,
+          playerScore,
         });
       } else {
         this.server.to(dto.roomId).emit('wrongProposal', {
           playerId: dto.user._id,
           nextPlayerId,
+          playerScore,
         });
       }
     } catch (err) {
@@ -96,10 +121,7 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // FIXME: Use events here to decouple from RoomService
   startNextRound(roomId: string, obfuscatedWord: Array<string|null>, obfuscatedDefinition: string, nextPlayerId: string): void {
-    console.log('new round', roomId, obfuscatedWord, obfuscatedDefinition, nextPlayerId);
-
     this.server.to(roomId).emit('newRound', {
       definition: obfuscatedDefinition,
       obfuscatedWord,
@@ -108,8 +130,6 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   timeout(roomId: string, playerId: string, nextPlayerId: string) {
-    console.log('timeout', roomId, playerId, nextPlayerId);
-
     this.server.to(roomId).emit('timeout', {
       playerId,
       nextPlayerId,
@@ -117,6 +137,8 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   sendError(socket: Socket, event: string, roomId: string, error: Error) {
+    console.error(error, roomId, socket.id);
+
     socket.emit('gameError', {
       ...error,
       event,
@@ -124,15 +146,28 @@ export class EventGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  stopRoom(roomId: string): void {
-    this.server.to(roomId).emit('stop');
-  }
+  handleConnection(socket: Socket): any {
+    socket.once('disconnecting', async (): Promise<void> => {
+      try {
+        const rooms = Object.values(socket.rooms).filter(Types.ObjectId.isValid);
+        const token = ExtractJWTFromWs(socket);
 
-  handleConnection(client: Client): any {
-    console.log('New websocket client', client.id);
-  }
+        if (!token) {
+          return;
+        }
 
-  handleDisconnect(client: Client): any {
-    console.log('Websocket client disconnected', client.id);
+        const userId = ExtractUserIdFromJWT(token);
+        const user = await this.userService.findById(userId);
+
+        await Promise.all(rooms.map(async (room) => {
+          await this.leaveRoom(socket, {
+            roomId: room,
+            user,
+          });
+        }));
+      } catch (err) {
+        console.error(err, 'error while disconnecting user', socket.id);
+      }
+    });
   }
 }

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Vote } from './models/vote.model';
 import { VoteService } from './vote.service';
-import { VoteMapper } from '../shared/mappers/vote.mapper';
 
 @Module({
   imports: [
@@ -11,7 +10,7 @@ import { VoteMapper } from '../shared/mappers/vote.mapper';
       schema: Vote.model.schema,
     }]),
   ],
-  providers: [VoteService, VoteMapper],
+  providers: [VoteService],
   exports: [VoteService],
 })
 export class VoteModule {}

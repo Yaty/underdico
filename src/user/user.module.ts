@@ -3,8 +3,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User } from './models/user.model';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { UserMapper } from '../shared/mappers/user.mapper';
 import { WordModule } from '../word/word.module';
+import { RoomModule } from '../room/room.module';
+import { VoteModule } from '../vote/vote.module';
 
 @Module({
   imports: [
@@ -12,9 +13,11 @@ import { WordModule } from '../word/word.module';
       name: User.modelName,
       schema: User.model.schema,
     }]),
+    VoteModule,
     WordModule,
+    RoomModule,
   ],
-  providers: [UserService, UserMapper],
+  providers: [UserService],
   controllers: [UserController],
   exports: [UserService],
 })

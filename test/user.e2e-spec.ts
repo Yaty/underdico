@@ -8,9 +8,16 @@ import { UserDto } from '../src/user/dto/user.dto';
 import { configure } from '../src/app.configuration';
 import TestUtils from './utils';
 import * as fs from 'fs';
+import { RoomService } from '../src/room/room.service';
+import { UserService } from '../src/user/user.service';
+import * as pEvent from 'p-event';
+import { WordService } from '../src/word/word.service';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
+  let roomService: RoomService;
+  let userService: UserService;
+  let wordService: WordService;
   let utils: TestUtils;
   let api;
 
@@ -23,6 +30,9 @@ describe('UserController (e2e)', () => {
 
     configure(app);
     await app.init();
+    roomService = moduleFixture.get<RoomService>(RoomService);
+    userService = moduleFixture.get<UserService>(UserService);
+    wordService = moduleFixture.get<WordService>(WordService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -39,6 +49,7 @@ describe('UserController (e2e)', () => {
     expect(user).toHaveProperty('id');
     expect(user).toHaveProperty('createdAt');
     expect(user).toHaveProperty('updatedAt');
+    expect(user).toHaveProperty('score');
 
     if (expectedUser.locale) {
       expect(user.locale).toEqual(expectedUser.locale);
@@ -196,6 +207,61 @@ describe('UserController (e2e)', () => {
         expect(res.body).toHaveProperty('userId');
         expect(res.body).toHaveProperty('expiresIn');
         expect(res.body).toHaveProperty('createdAt');
+      });
+  });
+
+  it('/users/:userId/summary (GET)', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+    const vote = await utils.voteForAWord(auth.token, word.id, true);
+    const roomId = await utils.createRoom(auth.token);
+
+    await roomService.stop(roomId);
+
+    await api.get('/api/users/' + auth.userId + '/summary')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.user.id).toEqual(auth.userId);
+        expect(res.body.words[0].id).toEqual(word.id);
+        expect(res.body.votes[0].id).toEqual(vote.id);
+        expect(res.body.rooms[0].id).toEqual(roomId);
+      });
+  });
+
+  it('/users/:userId (GET) with score', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const userInstance = await userService.findUserById(auth.userId);
+    const roomId = await utils.createRoom(auth.token);
+
+    await roomService.startRoom({
+      roomId,
+      user: userInstance,
+    });
+
+    await pEvent(roomService, 'startNextRound');
+
+    const room = await roomService.findById(roomId);
+    const goodWordId = room.rounds[room.rounds.length - 1].wordId as unknown as string;
+    const goodWordName = (await wordService.findWordById(goodWordId)).name;
+
+    await roomService.checkProposal({
+      roomId,
+      user: userInstance,
+      proposal: goodWordName,
+    }, userInstance);
+
+    await pEvent(roomService, 'startNextRound');
+
+    await roomService.stop(roomId);
+
+    await api.get('/api/users/' + auth.userId)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.score).toEqual(1);
       });
   });
 });
