@@ -3,6 +3,7 @@ import { InstanceType, ModelType } from 'typegoose';
 import { BaseMapper } from './mappers/base.mapper';
 import { BaseModel, BaseModelDto } from './base.model';
 import { EventEmitter } from 'events';
+import { NotFoundException } from '@nestjs/common';
 
 export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto> extends EventEmitter {
   protected constructor(
@@ -18,6 +19,16 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
 
   private get dtoName(): string {
     return `${this.model.modelName}Dto`;
+  }
+
+  async deleteById(id: string): Promise<void> {
+    if (await this.doNotExists(id)) {
+      throw new NotFoundException('Word not found');
+    }
+
+    await this.model.deleteOne({
+      _id: BaseService.toObjectId(id),
+    });
   }
 
   async doNotExists(id: string): Promise<boolean> {

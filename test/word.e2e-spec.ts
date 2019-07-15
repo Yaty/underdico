@@ -8,10 +8,13 @@ import { configure } from '../src/app.configuration';
 import TestUtils from './utils';
 import * as fs from 'fs';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
+import { Configuration } from '../src/shared/configuration/configuration.enum';
+import { ConfigurationService } from '../src/shared/configuration/configuration.service';
 
 describe('WordController (e2e)', () => {
   let app: INestApplication;
   let utils: TestUtils;
+  let configService: ConfigurationService;
   let api;
 
   beforeAll(async () => {
@@ -23,6 +26,7 @@ describe('WordController (e2e)', () => {
 
     configure(app);
     await app.init();
+    configService = app.get<ConfigurationService>(ConfigurationService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -82,6 +86,28 @@ describe('WordController (e2e)', () => {
       .expect(201)
       .then((res) => {
         checkWord(word, res.body, auth.userId);
+      });
+  });
+
+  it('/words (POST) with example', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+
+    const word: CreateWordDto = {
+      name: uuid().substr(0, 6),
+      definition: uuid(),
+      tags: [uuid()],
+      locale: 'en',
+      example: '123',
+    };
+
+    await api.post('/api/words')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send(word)
+      .expect(201)
+      .then((res) => {
+        checkWord(word, res.body, auth.userId);
+        expect(res.body.example).toEqual(word.example);
       });
   });
 
@@ -373,6 +399,29 @@ describe('WordController (e2e)', () => {
         expect(res.body.length).toEqual(1);
         expect(res.body[0].id).toEqual(word.id);
       });
+  });
+
+  it('/words/{wordId} (DELETE) is not possible for a user', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const wordId = await utils.createWord(auth.token);
+
+    await api.delete('/api/words/' + wordId)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(401);
+  });
+
+  it('/words/{wordId} (DELETE) with admin', async () => {
+    const auth = await utils.login({
+      username: 'admin',
+      password: configService.get(Configuration.ADMIN_PASSWORD),
+    });
+
+    const word = await utils.createWord(auth.token);
+
+    await api.delete('/api/words/' + word.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
   });
 
   it('/words/{wordId} (GET)', async () => {

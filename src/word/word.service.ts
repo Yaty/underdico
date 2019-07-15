@@ -37,15 +37,11 @@ export class WordService extends BaseService<Word, WordDto> {
   }
 
   async createWord(word: CreateWordDto, owner: User): Promise<Word> {
-    const newWord = Word.createModel();
+    const result = await this.wordModel.create({
+      ...word,
+      userId: owner._id,
+    });
 
-    newWord.name = word.name;
-    newWord.definition = word.definition;
-    newWord.tags = word.tags;
-    newWord.userId = owner._id;
-    newWord.locale = word.locale;
-
-    const result = await this.create(newWord);
     return this.findWordById(result._id);
   }
 

@@ -5,11 +5,13 @@ import { WordDto } from '../src/word/dto/word.dto';
 import { CreateWordDto } from '../src/word/dto/create-word.dto';
 import { VoteDto } from '../src/vote/dto/vote.dto';
 import { CreateRoomDto } from '../src/room/dto/create-room.dto';
+import { CredentialsDto } from '../src/user/dto/credentials.dto';
+import { UserDto } from '../src/user/dto/user.dto';
 
 export default class TestUtils {
   constructor(private readonly api) {}
 
-  createUser(): Promise<RegisterDto> {
+  createUser(): Promise<CredentialsDto & UserDto> {
     return new Promise((resolve, reject) => {
       const user: RegisterDto = {
         username: uuid().substr(0, 10),
@@ -20,14 +22,17 @@ export default class TestUtils {
       return this.api.post('/api/users')
         .send(user)
         .expect(201)
-        .then(() => {
-          resolve(user);
+        .then((res) => {
+          resolve({
+            ...res.body,
+            ...user,
+          });
         })
         .catch(reject);
     });
   }
 
-  login(user: RegisterDto): Promise<TokenResponseDto> {
+  login(user: CredentialsDto): Promise<TokenResponseDto> {
     return new Promise((resolve, reject) => {
       this.api.post('/api/users/token')
         .send({

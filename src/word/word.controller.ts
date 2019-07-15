@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpCode,
   HttpStatus,
   Param,
   Patch,
@@ -60,6 +61,7 @@ import * as request from 'request';
 import { Where } from '../shared/decorators/where.decorator';
 import { Sort } from '../shared/decorators/sort.decorator';
 import { User } from '../shared/decorators/user.decorator';
+import { DeleteByIdParamsDto } from './dto/delete-by-id-params.dto';
 
 @Controller('words')
 @ApiUseTags(Word.modelName)
@@ -142,6 +144,20 @@ export class WordController {
   ): Promise<void> {
     const wordId = await this.wordService.getDailyWordId(locale);
     res.redirect(`https://${req.get('host')}/api/words/${wordId}`);
+  }
+
+  @Delete(':wordId')
+  @HttpCode(204)
+  @Roles(UserRole.Admin)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(Word.modelName, 'DeleteById'))
+  @ApiImplicitParam({ name: 'wordId', required: true })
+  async deleteById(
+    @Param() params: DeleteByIdParamsDto,
+  ): Promise<void> {
+    await this.wordService.deleteById(params.wordId);
   }
 
   @Get(':wordId')

@@ -33,6 +33,7 @@ export class User extends BaseModel<User> {
   locale: string;
 
   karma?: number;
+  score?: number;
 
   static get model(): ModelType<User> {
     return new User().getModelForClass(User, {

@@ -261,9 +261,9 @@ export class RoomService extends BaseService<Room, RoomDto> {
     const obfuscatedDescription = word.definition.replace(
       new RegExp(
         word.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-        'i',
+        'ig',
       ),
-      'X',
+      '[X]',
     );
 
     this.emit('startNextRound', {

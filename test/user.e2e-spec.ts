@@ -12,12 +12,15 @@ import { RoomService } from '../src/room/room.service';
 import { UserService } from '../src/user/user.service';
 import * as pEvent from 'p-event';
 import { WordService } from '../src/word/word.service';
+import { ConfigurationService } from '../src/shared/configuration/configuration.service';
+import { Configuration } from '../src/shared/configuration/configuration.enum';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
   let roomService: RoomService;
   let userService: UserService;
   let wordService: WordService;
+  let configService: ConfigurationService;
   let utils: TestUtils;
   let api;
 
@@ -33,6 +36,7 @@ describe('UserController (e2e)', () => {
     roomService = moduleFixture.get<RoomService>(RoomService);
     userService = moduleFixture.get<UserService>(UserService);
     wordService = moduleFixture.get<WordService>(WordService);
+    configService = moduleFixture.get<ConfigurationService>(ConfigurationService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -99,6 +103,28 @@ describe('UserController (e2e)', () => {
         expect(res.body.errors[3].property).toEqual('password');
         expect(res.body.errors[3].constraints.length).toBeTruthy();
       });
+  });
+
+  it('/users/{userId} (DELETE)', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+
+    await api.delete('/api/users/' + user.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
+  });
+
+  it('/users/{userId} (DELETE) with admin', async () => {
+    const auth = await utils.login({
+      username: 'admin',
+      password: configService.get(Configuration.ADMIN_PASSWORD),
+    });
+
+    const user = await utils.createUser();
+
+    await api.delete('/api/users/' + user.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
   });
 
   it('/users/{userId} (GET)', async () => {

@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpCode,
   HttpException,
   HttpStatus,
   Param,
@@ -121,6 +122,25 @@ export class UserController {
   ): Promise<UserDto> {
     const user = await this.userService.findUserById(params.userId);
     return this.userService.mapper.map(user);
+  }
+
+  @Delete(':userId')
+  @HttpCode(204)
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiNoContentResponse({})
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(User.modelName, 'DeleteById'))
+  @ApiImplicitParam({ name: 'userId', required: true })
+  async deleteById(
+    @Param() params: FindByIdParamsDto,
+    @GetUser() user,
+  ): Promise<void> {
+    if (user.role === UserRole.User && user._id.toString() !== params.userId) {
+      throw new ForbiddenException('Not you');
+    }
+
+    await this.userService.deleteById(params.userId);
   }
 
   @Get(':userId/summary')

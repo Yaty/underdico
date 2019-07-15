@@ -81,7 +81,7 @@ export class UserService extends BaseService<User, UserDto> implements OnApplica
         await this.userModel.create({
           username: 'admin',
           role: UserRole.Admin,
-          password: this.configurationService.get(Configuration.ADMIN_PASSWORD),
+          password: await this.hashPassword(this.configurationService.get(Configuration.ADMIN_PASSWORD)),
           email: this.configurationService.get(Configuration.ADMIN_EMAIL),
         });
       }
@@ -162,14 +162,7 @@ export class UserService extends BaseService<User, UserDto> implements OnApplica
   }
 
   async findUserById(userId: string): Promise<InstanceType<User>> {
-    if (BaseService.isInvalidObjectId(userId)) {
-      throw new NotFoundException('User not found');
-    }
-
-    const user = await this.userModel
-      .findById(userId)
-      .lean()
-      .exec();
+    const user = await this.findById(userId);
 
     if (!user) {
       throw new NotFoundException('User not found');
