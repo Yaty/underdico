@@ -1,5 +1,14 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiUseTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiUnprocessableEntityResponse,
+  ApiUseTags,
+} from '@nestjs/swagger';
 import { RoomService } from './room.service';
 import { Room } from './models/room.model';
 import { RoomDto } from './dto/room.dto';
@@ -14,6 +23,7 @@ import { RoomStatus } from './models/room-status.enum';
 import { Where } from '../shared/decorators/where.decorator';
 import { Sort } from '../shared/decorators/sort.decorator';
 import { User } from '../shared/decorators/user.decorator';
+import { ApiException } from '../shared/api-exception.model';
 
 @Controller('rooms')
 @ApiUseTags(Room.modelName)
@@ -40,6 +50,7 @@ export class RoomController {
     } = await this.roomService.getRooms(skip, take, {
       ...where,
       status:  RoomStatus.Created,
+      isPrivate: false,
     }, sort);
 
     res.set('Content-Range', `${skip}-${skip + rooms.length - 1}/${count}`);
@@ -60,6 +71,21 @@ export class RoomController {
   ): Promise<void> {
     const room = await this.roomService.createRoom(dto, user);
     res.set('Location', `https://${req.get('host')}/api/rooms/${room._id}`);
-    res.status(201).json(this.roomService.mapper.map(room));
+    res.status(201).json(this.roomService.mapper.map(room, false));
+  }
+
+  @Get('/private')
+  @Roles(UserRole.Admin, UserRole.User)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiResponse({ status: HttpStatus.OK, type: RoomDto })
+  @ApiUnprocessableEntityResponse({ type: ApiException })
+  @ApiNotFoundResponse({ type: ApiException })
+  @ApiOperation(GetOperationId(Room.modelName, 'GetPrivateRoom'))
+  async findById(
+    @Query('code') code,
+    @User() user,
+  ): Promise<RoomDto> {
+    const room = await this.roomService.findRoomByCode(code);
+    return this.roomService.mapper.map(room);
   }
 }

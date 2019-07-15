@@ -38,6 +38,12 @@ export class Word extends BaseModel<Word> {
   })
   locale: string;
 
+  @prop({
+    required: false,
+    maxlength: 1024,
+  })
+  example?: string;
+
   user?: User;
 
   static get model(): ModelType<Word> {

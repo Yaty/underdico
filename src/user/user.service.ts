@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { InstanceType, ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
@@ -14,12 +14,18 @@ import { UserDto } from './dto/user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { WordService } from '../word/word.service';
 import { RoomService } from '../room/room.service';
+import { ConfigurationService } from '../shared/configuration/configuration.service';
+import { UserRole } from './models/user-role.enum';
+import { Configuration } from '../shared/configuration/configuration.enum';
 
 @Injectable()
-export class UserService extends BaseService<User, UserDto> {
+export class UserService extends BaseService<User, UserDto> implements OnApplicationBootstrap {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectModel(User.modelName) private readonly userModel: ModelType<User>,
     mapper: UserMapper,
+    private readonly configurationService: ConfigurationService,
     private readonly authService: AuthService,
     private readonly wordService: WordService,
     private readonly roomService: RoomService,
@@ -63,6 +69,27 @@ export class UserService extends BaseService<User, UserDto> {
         resolve(expectedDerivedKey === derivedKey.toString(this.SCRYPT_MEMBERS_ENCODING));
       });
     });
+  }
+
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      const adminDoNotExists = (await this.userModel.countDocuments({
+        username: 'admin',
+      })) === 0;
+
+      if (adminDoNotExists) {
+        await this.userModel.create({
+          username: 'admin',
+          role: UserRole.Admin,
+          password: this.configurationService.get(Configuration.ADMIN_PASSWORD),
+          email: this.configurationService.get(Configuration.ADMIN_EMAIL),
+        });
+      }
+
+      this.logger.log('User service initialized');
+    } catch (err) {
+      this.logger.error('Error while initializing user service', err.toString());
+    }
   }
 
   async register(dto: RegisterDto): Promise<User> {

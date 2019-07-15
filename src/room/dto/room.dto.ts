@@ -1,4 +1,4 @@
-import { ApiModelProperty } from '@nestjs/swagger';
+import { ApiModelProperty, ApiModelPropertyOptional } from '@nestjs/swagger';
 import { BaseModelDto } from '../../shared/base.model';
 import { RoomStatus } from '../models/room-status.enum';
 import { RoundDto } from './round.dto';
@@ -38,4 +38,7 @@ export class RoomDto extends BaseModelDto {
 
   @ApiModelProperty()
   readonly rounds: RoundDto[];
+
+  @ApiModelPropertyOptional()
+  readonly code?: string;
 }

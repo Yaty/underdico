@@ -32,4 +32,7 @@ export class WordDto extends BaseModelDto {
 
   @ApiModelProperty()
   readonly locale: string;
+
+  @ApiModelPropertyOptional()
+  readonly example?: string;
 }

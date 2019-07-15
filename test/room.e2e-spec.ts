@@ -6,10 +6,12 @@ import { configure } from '../src/app.configuration';
 import TestUtils from './utils';
 import { CreateRoomDto } from '../src/room/dto/create-room.dto';
 import * as uuid from 'uuid/v4';
+import { RoomService } from '../src/room/room.service';
 
 describe('RoomController (e2e)', () => {
   let app: INestApplication;
   let utils: TestUtils;
+  let roomService: RoomService;
   let api;
 
   beforeAll(async () => {
@@ -20,6 +22,7 @@ describe('RoomController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configure(app);
     await app.init();
+    roomService = moduleFixture.get<RoomService>(RoomService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -97,6 +100,45 @@ describe('RoomController (e2e)', () => {
         expect(res.body.ownerId).toEqual(auth.userId);
         expect(res.body.playersIds).toEqual([auth.userId]);
         expect(res.body.usernames[0]).toEqual(user.username);
+        expect(typeof res.body.code === 'undefined').toBeTruthy();
+      });
+  });
+
+  it('/api/rooms (POST) a private room', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const room: CreateRoomDto = {
+      name: uuid(),
+      isPrivate: true,
+    };
+
+    await api.post('/api/rooms')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .send(room)
+      .expect(201)
+      .then((res) => {
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.name).toEqual(room.name);
+        expect(res.body.isPrivate).toEqual(true);
+        expect(typeof res.body.code === 'string').toBeTruthy();
+      });
+  });
+
+  it('/apis/rooms/private (GET)', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+
+    const roomId = await utils.createRoom(auth.token, {
+      isPrivate: true,
+    });
+
+    const room = await roomService.findById(roomId);
+
+    await api.get('/api/rooms/private?code=' + room.code)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.id).toEqual(roomId);
       });
   });
 });

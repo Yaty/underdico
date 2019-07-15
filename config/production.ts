@@ -2,7 +2,7 @@ import { Config } from './config.interface';
 
 const config: Config = {
   HOST: process.env.HOST,
-  PORT: Number(process.env.PORT),
+  PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_ALGORITHM: process.env.JWT_ALGORITHM,
@@ -16,6 +16,8 @@ const config: Config = {
   REDIS_PORT: process.env.REDIS_PORT,
   REDIS_DB: process.env.REDIS_DB,
   REDIS_PREFIX: process.env.REDIS_PREFIX,
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL,
 };
 
 export default config;

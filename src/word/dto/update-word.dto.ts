@@ -1,5 +1,5 @@
 import { ApiModelPropertyOptional } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsOptional, IsString, Length } from 'class-validator';
+import { ArrayUnique, IsArray, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { IsIso6391 } from '../../shared/decorators/is-iso-639-1.decorator';
 
 export class UpdateWordDto {
@@ -27,4 +27,10 @@ export class UpdateWordDto {
     optional: true,
   })
   readonly locale?: string;
+
+  @ApiModelPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1024)
+  readonly example?: string;
 }

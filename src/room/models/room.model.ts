@@ -83,6 +83,11 @@ export class Room extends BaseModel<Room> {
   isPrivate: boolean;
 
   @prop({
+    required: false,
+  })
+  code: string;
+
+  @prop({
     default: false,
   })
   isRanked: boolean;

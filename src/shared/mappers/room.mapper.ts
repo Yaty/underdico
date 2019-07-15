@@ -22,10 +22,15 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       rounds: 'rounds',
       usernames: 'usernames',
       timeout: 'timeout',
+      code: 'code',
     });
   }
 
-  public map(room: Room): RoomDto {
+  public map(room: Room, hideCode = true): RoomDto {
+    if (hideCode) {
+      delete room.code;
+    }
+
     return morphism(this.schema, room);
   }
 

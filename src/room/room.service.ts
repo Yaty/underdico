@@ -1,6 +1,4 @@
-// tslint:disable:no-console
-
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ModelType } from 'typegoose';
 import { BaseService } from '../shared/base.service';
@@ -17,9 +15,12 @@ import { PlayDto } from '../event/dto/play.dto';
 import { WordService } from '../word/word.service';
 import { Types } from 'mongoose';
 import { Sort } from '../shared/decorators/sort.decorator';
+import * as randomatic from 'randomatic';
 
 @Injectable()
 export class RoomService extends BaseService<Room, RoomDto> {
+  private readonly logger = new Logger(RoomService.name);
+
   constructor(
     @InjectModel(Room.modelName) private readonly roomModel: ModelType<Room>,
     mapper: RoomMapper,
@@ -28,17 +29,45 @@ export class RoomService extends BaseService<Room, RoomDto> {
     super(roomModel, mapper);
   }
 
+  async findRoomById(roomId: string): Promise<Room> {
+    const {
+      rooms,
+    } = await this.getRooms(0, 1, {
+      _id: RoomService.toObjectId(roomId),
+    });
+
+    const room = rooms[0];
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return room;
+  }
+
+  async findRoomByCode(code: string): Promise<Room> {
+    const {
+      rooms,
+    } = await this.getRooms(0, 1, {
+      code: code.trim().toLowerCase(),
+      isPrivate: true,
+    });
+
+    const room = rooms[0];
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    return room;
+  }
+
   async getRooms(skip: number, take: number, where = {}, sort?: Sort): Promise<{
     rooms: Room[],
     count: number,
   }> {
-    const match = {
-      ...where,
-      isPrivate: false,
-    };
-
     const pipeline: object[] = [{
-      $match: match,
+      $match: where,
     }];
 
     if (sort) {
@@ -88,7 +117,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     const [rooms, count] = await Promise.all([
       this.roomModel.aggregate(pipeline).exec(),
-      this.roomModel.countDocuments(match).exec(),
+      this.roomModel.countDocuments(where).exec(),
     ]);
 
     return  {
@@ -98,25 +127,22 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
-    const createdRoom = await this.roomModel.create({
+    const payload: Partial<Room> = {
       ...dto,
       playersIds: [owner._id],
       ownerId: owner._id,
-    });
-
-    return {
-      ...createdRoom.toJSON(),
-      usernames: [owner.username],
     };
+
+    if (payload.isPrivate) {
+      payload.code = randomatic('a0', 5);
+    }
+
+    const createdRoom = await this.roomModel.create(payload);
+    return this.findRoomById(createdRoom._id);
   }
 
   async getRoomStatus(roomId: string): Promise<RoomStatus> {
-    const room = await this.findById(roomId);
-
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
-
+    const room = await this.findRoomById(roomId);
     return room.status;
   }
 
@@ -125,6 +151,12 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     if (roomStatus === RoomStatus.Terminated) {
       throw new BadRequestException('Room needs to be in started or created state');
+    }
+
+    const room = await this.roomModel.findById(dto.roomId).lean().exec();
+
+    if (room.isPrivate && (typeof dto.code !== 'string' || dto.code.trim().toLowerCase() !== room.code)) {
+      throw new UnauthorizedException('This room is private');
     }
 
     await this.roomModel.updateOne({
@@ -177,7 +209,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       try {
         await this.startNextRound(dto.roomId);
       } catch (err) {
-        console.error(err, 'Error while launching first round');
+        this.logger.error('Error while launching first round', err.toString());
       }
     }, 100, dto.roomId);
   }
@@ -189,7 +221,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new BadRequestException('Room needs to be in started state');
     }
 
-    const room = await this.findById(roomId);
+    const room = await this.findRoomById(roomId);
     const word = await this.wordService.getRandomWord(room.locale);
 
     if (!word) {
@@ -255,18 +287,14 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new BadRequestException('Room needs to be in started state');
     }
 
-    const room = await this.roomModel
-      .findById(dto.roomId)
-      .lean()
-      .exec();
-
+    const room = await this.findRoomById(dto.roomId);
     const round = room.rounds[room.rounds.length - 1];
 
     if (round.currentPlayerId.toString() !== player._id.toString()) {
       throw new ForbiddenException('This is not your turn to play');
     }
 
-    const currentWord = await this.wordService.findWordById(round.wordId);
+    const currentWord = await this.wordService.findWordById(round.wordId.toString());
     const currentWordName = currentWord.name.toLowerCase();
     const proposal = dto.proposal.toLowerCase();
     const proposalResultIsCorrect = currentWordName === proposal;
@@ -295,7 +323,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
         try {
           await this.startNextRound(dto.roomId);
         } catch (err) {
-          console.error(err, 'Error while starting next round after good proposal.');
+          this.logger.error('Error while starting next round after good proposal.', err.toString());
         }
       }, 100, dto.roomId);
 
@@ -319,7 +347,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new BadRequestException('Room needs to be in started state');
     }
 
-    const room = await this.findById(roomId);
+    const room = await this.findRoomById(roomId);
 
     const currentPlayerIndex = room.playersIds.findIndex(
       (playerId) => playerId.toString() === room.rounds[room.rounds.length - 1].currentPlayerId.toString(),
@@ -338,11 +366,11 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async handleTimeout(roomId: string, roundId: Types.ObjectId, playerId: Types.ObjectId): Promise<void> {
-    let room = await this.roomModel.findById(roomId).lean().exec();
+    let room = await this.findRoomById(roomId);
 
     await this.addTimeout(async () => {
       try {
-        room = await this.roomModel.findById(roomId).lean().exec();
+        room = await this.findRoomById(roomId);
 
         if (room.status === RoomStatus.Terminated) {
           return;
@@ -364,7 +392,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
           }
         }
       } catch (err) {
-        console.error(err, 'Error while handling round timeout');
+        this.logger.error('Error while handling round timeout', err.toString());
       }
     }, room.timeout * 1000, roomId);
   }

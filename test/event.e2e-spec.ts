@@ -508,4 +508,31 @@ describe('Event (E2E)', () => {
     const event: any = await pEvent(ownerClient, 'playerRemoved');
     expect(event.id).toEqual(otherAuth.userId);
   }, 20000);
+
+  it('joins a private room', async () => {
+    const owner = await utils.createUser();
+    const ownerAuth = await utils.login(owner);
+    const roomId = await utils.createRoom(ownerAuth.token, {
+      isPrivate: true,
+    });
+
+    await app.listen(3015);
+
+    const ownerClient = socketIOClient.connect('ws://localhost:3015', {
+      // @ts-ignore
+      extraHeaders: {
+        Authorization: 'Bearer ' + ownerAuth.token,
+      },
+    });
+
+    const room = await roomService.findById(roomId);
+
+    ownerClient.emit('joinRoom', {
+      roomId,
+      code: room.code,
+    });
+
+    const res: any = await pEvent(ownerClient, 'newPlayer');
+    expect(res.id).toEqual(ownerAuth.userId);
+  }, 20000);
 });

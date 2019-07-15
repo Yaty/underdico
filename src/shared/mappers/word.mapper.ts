@@ -24,6 +24,7 @@ export class WordMapper extends BaseMapper<WordDto, Word> {
       name: 'name',
       tags: 'tags',
       locale: 'locale',
+      example: 'example',
       user: (it) => this.userMapper.map(it.user),
       // @ts-ignore
       score: (it) => typeof it.score === 'number' ? it.score // on GET words without a where score is already calculated

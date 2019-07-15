@@ -116,7 +116,7 @@ export default class TestUtils {
     });
   }
 
-  createRoom(token: string, data: object = {}): Promise<string> {
+  createRoom(token: string, data: Partial<CreateRoomDto> = {}): Promise<string> {
     return new Promise((resolve, reject) => {
       const room: CreateRoomDto = {
         name: uuid(),

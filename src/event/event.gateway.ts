@@ -1,10 +1,8 @@
-// tslint:disable:no-console
-
 import { OnGatewayConnection, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { LeaveRoomDto } from './dto/leave-room.dto';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { WsJwtGuard } from '../shared/guards/ws.guard';
 import { StartRoomDto } from './dto/start-room.dto';
 import { RoomService } from '../room/room.service';
@@ -16,6 +14,8 @@ import { Types } from 'mongoose';
 
 @WebSocketGateway()
 export class EventGateway implements OnGatewayConnection {
+  private readonly logger = new Logger(EventGateway.name);
+
   constructor(
     private readonly roomService: RoomService,
     private readonly userService: UserService,
@@ -137,7 +137,7 @@ export class EventGateway implements OnGatewayConnection {
   }
 
   sendError(socket: Socket, event: string, roomId: string, error: Error) {
-    console.error(error, roomId, socket.id);
+    this.logger.error('Error on room ' + roomId + ' by socket ' + socket.id, error.toString());
 
     socket.emit('gameError', {
       ...error,
@@ -166,7 +166,7 @@ export class EventGateway implements OnGatewayConnection {
           });
         }));
       } catch (err) {
-        console.error(err, 'error while disconnecting user', socket.id);
+        this.logger.error('Error while disconnecting user with socket ' + socket.id, err.toString());
       }
     });
   }
