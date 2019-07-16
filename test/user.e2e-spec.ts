@@ -114,6 +114,37 @@ describe('UserController (e2e)', () => {
       .expect(204);
   });
 
+  it('/users/{userId} (DELETE) and not delete related models', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+    const roomId = await utils.createRoom(auth.token);
+
+    await api.delete('/api/users/' + user.id)
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
+
+    await api.get('/api/words/' + word.id)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.user).toBeUndefined();
+      });
+
+    await api.get('/api/words')
+      .expect(200)
+      .then((res) => {
+        const i  = res.body.findIndex((w) => w.id === word.id);
+        expect(i !== -1).toBeTruthy();
+      });
+
+    await api.get('/api/rooms')
+      .expect(200)
+      .then((res) => {
+        const i = res.body.findIndex((r) => r.id === roomId);
+        expect(i !== -1).toBeTruthy();
+      });
+  });
+
   it('/users/{userId} (DELETE) with admin', async () => {
     const auth = await utils.login({
       username: 'admin',

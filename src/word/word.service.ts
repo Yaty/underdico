@@ -144,7 +144,10 @@ export class WordService extends BaseService<Word, WordDto> {
     pipeline.push({
       $lookup: this.usersLookupOption,
     }, {
-      $unwind: '$user',
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true,
+      },
     });
 
     return pipeline;
@@ -165,7 +168,9 @@ export class WordService extends BaseService<Word, WordDto> {
     ]);
 
     await Promise.all(words.map(async (word) => {
-      word.user.karma = await this.getUserWordsTotalScore(word.userId);
+      if (word.user) {
+        word.user.karma = await this.getUserWordsTotalScore(word.userId);
+      }
     }));
 
     return {
@@ -182,18 +187,23 @@ export class WordService extends BaseService<Word, WordDto> {
     const words = await this.wordModel
       .aggregate()
       .match({
-        _id: BaseService.toObjectId(id),
+         _id: BaseService.toObjectId(id),
       })
       .lookup(this.votesLookupOption)
       .lookup(this.usersLookupOption)
-      .unwind('user')
+      .unwind({
+        path: '$user',
+        preserveNullAndEmptyArrays: true,
+      })
       .exec();
 
     if (words.length === 0) {
       throw new NotFoundException('Word not found');
     }
 
-    words[0].user.karma = await this.getUserWordsTotalScore(words[0].userId);
+    if (words[0].user) {
+      words[0].user.karma = await this.getUserWordsTotalScore(words[0].userId);
+    }
 
     return words[0];
   }

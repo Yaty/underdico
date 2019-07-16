@@ -193,10 +193,14 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async startRoom(dto: StartRoomDto): Promise<void> {
-    const roomStatus = await this.getRoomStatus(dto.roomId);
+    const room = await this.findRoomById(dto.roomId);
 
-    if (roomStatus !== RoomStatus.Created) {
+    if (room.status !== RoomStatus.Created) {
       throw new BadRequestException('Room needs to be in created state');
+    }
+
+    if (dto.user._id.toString() !== room.ownerId.toString()) {
+      throw new ForbiddenException('You are not the owner');
     }
 
     await this.roomModel.updateOne({

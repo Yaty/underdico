@@ -63,8 +63,11 @@ describe('WordController (e2e)', () => {
       expect(word.userDownVoted).toBeUndefined();
     }
 
-    expect(typeof word.user.id === 'string').toBeTruthy();
-    expect(typeof word.user.karma === 'number').toBeTruthy();
+    if (word.user) { // might not exists if the user is deleted
+      expect(typeof word.user.id === 'string').toBeTruthy();
+      expect(typeof word.user.karma === 'number').toBeTruthy();
+    }
+
     expect(word).toHaveProperty('locale');
     expect(word).toHaveProperty('score');
   }

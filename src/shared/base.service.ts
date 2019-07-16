@@ -31,14 +31,18 @@ export abstract class BaseService<T extends BaseModel<T>, K extends BaseModelDto
     });
   }
 
-  async doNotExists(id: string): Promise<boolean> {
+  async exists(id: string): Promise<boolean> {
     if (BaseService.isInvalidObjectId(id)) {
-      return true;
+      return false;
     }
 
     return (await this.count({
       _id: id,
-    })) === 0;
+    })) === 1;
+  }
+
+  async doNotExists(id: string): Promise<boolean> {
+    return !(await this.exists(id));
   }
 
   findAll(filter = {}): Promise<Array<InstanceType<T>>> {
