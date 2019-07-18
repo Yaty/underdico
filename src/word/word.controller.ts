@@ -256,6 +256,7 @@ export class WordController {
     }
 
     await this.storageService.upload(file, 'audio/mpeg', WordService.objectIdToString(word._id));
+    await this.wordService.setHasAudio(params.wordId, true);
     res.sendStatus(204);
   }
 
@@ -292,6 +293,7 @@ export class WordController {
     }
 
     await this.storageService.delete(WordService.objectIdToString(word._id));
+    await this.wordService.setHasAudio(params.wordId, false);
     res.sendStatus(204);
   }
 }

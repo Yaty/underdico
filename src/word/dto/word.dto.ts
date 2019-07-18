@@ -33,6 +33,9 @@ export class WordDto extends BaseModelDto {
   @ApiModelProperty()
   readonly locale: string;
 
+  @ApiModelProperty()
+  readonly hasAudio: boolean;
+
   @ApiModelPropertyOptional()
   readonly example?: string;
 }

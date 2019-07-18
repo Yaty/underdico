@@ -156,7 +156,11 @@ export class RoomService extends BaseService<Room, RoomDto> {
     const room = await this.roomModel.findById(dto.roomId).lean().exec();
 
     if (room.isPrivate && (typeof dto.code !== 'string' || dto.code.trim().toLowerCase() !== room.code)) {
-      throw new UnauthorizedException('This room is private');
+      throw new UnauthorizedException('This room is private, wrong code');
+    }
+
+    if (room.playersIds.length >= room.maxPlayers) {
+      throw new ForbiddenException('Max player reached');
     }
 
     await this.roomModel.updateOne({

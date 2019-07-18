@@ -304,4 +304,12 @@ export class WordService extends BaseService<Word, WordDto> {
 
     return words;
   }
+
+  async setHasAudio(wordId: string, hasAudio: boolean): Promise<void> {
+    await this.wordModel.updateOne({
+      _id: wordId,
+    }, {
+      hasAudio,
+    }).exec();
+  }
 }

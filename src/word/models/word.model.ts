@@ -44,6 +44,11 @@ export class Word extends BaseModel<Word> {
   })
   example?: string;
 
+  @prop({
+    default: false,
+  })
+  hasAudio: boolean;
+
   user?: User;
 
   static get model(): ModelType<Word> {

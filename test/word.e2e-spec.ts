@@ -639,6 +639,23 @@ describe('WordController (e2e)', () => {
       .expect(204);
   });
 
+  it('/words/{wordId}/audio (PUT) and set hasAudio to true', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+
+    await api.put('/api/words/' + word.id + '/audio')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .attach('file', './test/audio.mp3')
+      .expect(204);
+
+    await api.get('/api/words/' + word.id)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.hasAudio).toBeTruthy();
+      });
+  });
+
   it('/words/{wordId}/audio (GET)', async () => {
     const user = await utils.createUser();
     const auth = await utils.login(user);
@@ -662,5 +679,22 @@ describe('WordController (e2e)', () => {
     await api.delete('/api/words/' + word.id + '/audio')
       .set('Authorization', 'Bearer ' + auth.token)
       .expect(204);
+  });
+
+  it('/words/{wordId}/audio (DELETE) and set hasAudio to false', async () => {
+    const user = await utils.createUser();
+    const auth = await utils.login(user);
+    const word = await utils.createWord(auth.token);
+    await utils.uploadAudio(auth.token, word.id);
+
+    await api.delete('/api/words/' + word.id + '/audio')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(204);
+
+    await api.get('/api/words/' + word.id)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.hasAudio).toBeFalsy();
+      });
   });
 });
