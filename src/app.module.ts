@@ -10,6 +10,7 @@ import { Configuration } from './shared/configuration/configuration.enum';
 import { EventModule } from './event/event.module';
 import { RoomModule } from './room/room.module';
 import { RedisModule } from 'nestjs-redis';
+import { GDPRModule } from './gdpr/gdpr.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RedisModule } from 'nestjs-redis';
       inject: [ConfigurationService],
     }),
     SharedModule,
+    GDPRModule,
     UserModule,
     WordModule,
     EventModule,

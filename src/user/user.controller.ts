@@ -54,10 +54,6 @@ import { UploadAvatarParams } from './dto/upload-avatar-params.dto';
 import { DownloadAvatarParams } from './dto/download-avatar-params.dto';
 import { DeleteAvatarParams } from './dto/delete-avatar-params.dto';
 import * as request from 'request';
-import { SummaryDto } from './dto/summary.dto';
-import { RoomService } from '../room/room.service';
-import { VoteService } from '../vote/vote.service';
-import { WordService } from '../word/word.service';
 import { User as GetUser } from '../shared/decorators/user.decorator';
 import { Pagination } from '../shared/decorators/pagination.decorator';
 import { Where } from '../shared/decorators/where.decorator';
@@ -70,9 +66,6 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly storageService: StorageService,
-    private readonly roomService: RoomService,
-    private readonly voteService: VoteService,
-    private readonly wordService: WordService,
   ) {}
 
   @Get()
@@ -168,32 +161,6 @@ export class UserController {
     }
 
     await this.userService.deleteById(params.userId);
-  }
-
-  @Get(':userId/summary')
-  @Roles(UserRole.Admin, UserRole.User)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @ApiOkResponse({ type: UserDto })
-  @ApiUnprocessableEntityResponse({ type: ApiException })
-  @ApiNotFoundResponse({ type: ApiException })
-  @ApiOperation(GetOperationId(User.modelName, 'GetSummary'))
-  @ApiImplicitParam({ name: 'userId', required: true })
-  async getUserSummary(
-    @Param() params: FindByIdParamsDto,
-  ): Promise<SummaryDto> {
-    const [user, rooms, votes, words] = await Promise.all([
-      this.userService.findUserById(params.userId),
-      this.roomService.findUserRooms(params.userId),
-      this.voteService.findUserVotes(params.userId),
-      this.wordService.findUserWords(params.userId),
-    ]);
-
-    return {
-      user: this.userService.mapper.map(user),
-      rooms: this.roomService.mapper.mapArray(rooms),
-      votes: this.voteService.mapper.mapArray(votes),
-      words: this.wordService.mapper.mapArray(words, WordService.toObjectId(params.userId)),
-    };
   }
 
   @Patch(':userId')
