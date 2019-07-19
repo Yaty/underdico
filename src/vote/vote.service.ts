@@ -17,7 +17,7 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
   }
 
   private async userVoteExistsForAWord(wordId: string, userId: string): Promise<boolean> {
-    return (await this.count({
+    return (await this.voteModel.countDocuments({
       wordId,
       userId,
     })) > 0;
@@ -30,12 +30,11 @@ export class VoteService extends BaseService<Vote, VoteDto>  {
       throw new ConflictException('A vote already exists for this word by this user');
     }
 
-    const vote = Vote.createModel();
-    vote.wordId = BaseService.toObjectId(wordId);
-    vote.userId = user._id;
-    vote.value = voteValue;
-    const createdVote = await this.create(vote);
-    return createdVote.toJSON();
+    return this.voteModel.create({
+      wordId: VoteService.toObjectId(wordId),
+      userId: user._id,
+      value: voteValue,
+    });
   }
 
   async updateVote(voteId: string, voteValue: boolean, user: User): Promise<Vote> {

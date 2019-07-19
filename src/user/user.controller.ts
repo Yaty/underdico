@@ -12,6 +12,7 @@ import {
   Patch,
   Post,
   Put,
+  Res,
   Response,
   UploadedFile,
   UseGuards,
@@ -58,6 +59,9 @@ import { RoomService } from '../room/room.service';
 import { VoteService } from '../vote/vote.service';
 import { WordService } from '../word/word.service';
 import { User as GetUser } from '../shared/decorators/user.decorator';
+import { Pagination } from '../shared/decorators/pagination.decorator';
+import { Where } from '../shared/decorators/where.decorator';
+import { Sort } from '../shared/decorators/sort.decorator';
 
 @Controller('users')
 @ApiUseTags(User.modelName)
@@ -70,6 +74,29 @@ export class UserController {
     private readonly voteService: VoteService,
     private readonly wordService: WordService,
   ) {}
+
+  @Get()
+  @Roles(UserRole.Admin)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOkResponse({ type: UserDto, isArray: true })
+  @ApiOperation(GetOperationId(User.modelName, 'GetUsers'))
+  async getUsers(
+    @Res() res,
+    @Pagination() range,
+    @Where() where,
+    @Sort() sort,
+  ): Promise<void> {
+    const { skip, take, limit } = range;
+
+    const {
+      users,
+      count,
+    } = await this.userService.getUsers(skip, take, where, sort);
+
+    res.set('Content-Range', `${skip}-${skip + users.length - 1}/${count}`);
+    res.set('Accept-Range', `${User.modelName} ${limit}`);
+    res.json(this.userService.mapper.mapArray(users));
+  }
 
   @Post()
   @ApiCreatedResponse({ type: UserDto })

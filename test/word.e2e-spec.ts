@@ -176,10 +176,12 @@ describe('WordController (e2e)', () => {
     const word = await utils.createWord(auth.token);
 
     for (let i = 0; i < 5; i++) {
-      await utils.voteForAWord(auth.token, word.id, true);
+      const u = await utils.createUser();
+      const a = await utils.login(u);
+      await utils.voteForAWord(a.token, word.id, true);
     }
 
-    return api.get('/api/words?where=' + JSON.stringify({
+    await api.get('/api/words?where=' + JSON.stringify({
       score: 5,
     }))
       .expect(200)
@@ -351,8 +353,6 @@ describe('WordController (e2e)', () => {
     const word3 = await utils.createWord(auth.token, 'fr');
 
     await utils.voteForAWord(auth.token, word1.id, true);
-    await utils.voteForAWord(auth.token, word1.id, true);
-    await utils.voteForAWord(auth.token, word2.id, true);
 
     await api.get('/api/words?sort=score,desc&where={"locale": "ar"}')
       .set('Authorization', 'Bearer ' + auth.token)
@@ -362,15 +362,12 @@ describe('WordController (e2e)', () => {
 
         const w1Index = res.body.findIndex((w) => w.id === word1.id);
         const w2Index = res.body.findIndex((w) => w.id === word2.id);
+        const w3Index = res.body.findIndex((w) => w.id === word3.id);
 
         expect(w1Index).toBeGreaterThanOrEqual(0);
         expect(w2Index).toBeGreaterThanOrEqual(1);
         expect(w2Index).toBeGreaterThan(w1Index);
-
-        for (const w of res.body) {
-          expect(w.id === word3.id).toBeFalsy();
-          expect(w.locale).toEqual('ar');
-        }
+        expect(w3Index).toEqual(-1);
       });
   });
 
@@ -557,7 +554,9 @@ describe('WordController (e2e)', () => {
     await utils.createWord(auth.token); // populate with random word
 
     for (let i = 0; i < bestWordScore + 1; i++) {
-      await utils.voteForAWord(auth.token, bestWord.id, true);
+      const u = await utils.createUser();
+      const a = await utils.login(u);
+      await utils.voteForAWord(a.token, bestWord.id, true);
     }
 
     await api.get('/api/words/daily')
@@ -580,8 +579,10 @@ describe('WordController (e2e)', () => {
     await utils.voteForAWord(auth.token, bestWorldInAnotherLocale.id, true);
 
     for (let i = 0; i < bestWordScore + 1; i++) {
-      await utils.voteForAWord(auth.token, bestWordInCorrectLocale.id, true);
-      await utils.voteForAWord(auth.token, bestWorldInAnotherLocale.id, true);
+      const u = await utils.createUser();
+      const a = await utils.login(u);
+      await utils.voteForAWord(a.token, bestWordInCorrectLocale.id, true);
+      await utils.voteForAWord(a.token, bestWorldInAnotherLocale.id, true);
     }
 
     await api.get('/api/words/daily?locale=' + locale)

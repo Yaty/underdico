@@ -129,7 +129,9 @@ export class RoomService extends BaseService<Room, RoomDto> {
   async createRoom(dto: CreateRoomDto, owner: User): Promise<Room> {
     const payload: Partial<Room> = {
       ...dto,
+      // @ts-ignore
       playersIds: [owner._id],
+      // @ts-ignore
       ownerId: owner._id,
     };
 

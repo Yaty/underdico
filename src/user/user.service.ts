@@ -1,6 +1,6 @@
 import { ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { InstanceType, ModelType } from 'typegoose';
+import { ModelType } from 'typegoose';
 import { AuthService } from '../shared/auth/auth.service';
 import { JwtPayload } from '../shared/auth/jwt-payload.interface';
 import { BaseService } from '../shared/base.service';
@@ -17,6 +17,7 @@ import { RoomService } from '../room/room.service';
 import { ConfigurationService } from '../shared/configuration/configuration.service';
 import { UserRole } from './models/user-role.enum';
 import { Configuration } from '../shared/configuration/configuration.enum';
+import { Sort } from '../shared/decorators/sort.decorator';
 
 @Injectable()
 export class UserService extends BaseService<User, UserDto> implements OnApplicationBootstrap {
@@ -161,21 +162,76 @@ export class UserService extends BaseService<User, UserDto> implements OnApplica
     return this.findUserById(userId);
   }
 
-  async findUserById(userId: string): Promise<InstanceType<User>> {
-    const user = await this.findById(userId);
+  async getUsers(skip: number, take: number, where = {}, sort?: Sort): Promise<{
+    users: User[];
+    count: number;
+  }> {
+    const pipeline: object[] = [{
+      $match: where,
+    }];
 
-    if (!user) {
+    if (sort) {
+      pipeline.push({
+        $sort: {
+          [sort.field]: sort.ordering === 'asc' ? 1 : -1,
+        },
+      });
+    } else {
+      pipeline.push({
+        $sort: {
+          createdAt: -1,
+        },
+      });
+    }
+
+    if (typeof skip === 'number' && skip > 0) {
+      pipeline.push({
+        $skip: skip,
+      });
+    }
+
+    if (typeof take === 'number' && take > 0 && take !== Infinity) {
+      pipeline.push({
+        $limit: take,
+      });
+    }
+
+    const [users, count] = await Promise.all([
+      this.userModel.aggregate(pipeline).exec(),
+      this.userModel.countDocuments(where).exec(),
+    ]);
+
+    await Promise.all(users.map(async (user) => {
+      const [karma, score] = await Promise.all([
+        this.wordService.getUserWordsTotalScore(user._id.toString()),
+        this.roomService.getUserScore(user._id.toString()),
+      ]);
+
+      user.karma = karma;
+      user.score = score;
+    }));
+
+    return {
+      users,
+      count,
+    };
+  }
+
+  async findUserById(userId: string): Promise<User> {
+    if (UserService.isInvalidObjectId(userId)) {
       throw new NotFoundException('User not found');
     }
 
-    const [karma, score] = await Promise.all([
-      this.wordService.getUserWordsTotalScore(userId),
-      this.roomService.getUserScore(userId),
-    ]);
+    const {
+      users,
+    } = await this.getUsers(0, 1, {
+      _id: UserService.toObjectId(userId),
+    });
 
-    user.karma = karma;
-    user.score = score;
+    if (!users[0]) {
+      throw new NotFoundException('User not found');
+    }
 
-    return user;
+    return users[0];
   }
 }

@@ -20,11 +20,11 @@ export class UserMapper extends BaseMapper<UserDto, User> {
     });
   }
 
-  public map(user: User, karma?: number): UserDto {
+  public map(user: User): UserDto {
     return morphism(this.schema, user);
   }
 
   public mapArray(users: User[]): UserDto[] {
-    return users.map(this.map);
+    return users.map((u) => this.map(u));
   }
 }

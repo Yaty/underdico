@@ -1,7 +1,6 @@
 import { User } from '../../user/models/user.model';
-import { InstanceType } from 'typegoose';
 
 export class BaseRoomDto {
-  readonly user: InstanceType<User>;
+  readonly user: User;
   readonly roomId: string;
 }

@@ -62,6 +62,24 @@ describe('UserController (e2e)', () => {
     }
   }
 
+  it('/users (GET)', async () => {
+    const auth = await utils.login({
+      username: 'admin',
+      password: configService.get(Configuration.ADMIN_PASSWORD),
+    });
+
+    await utils.createUser();
+
+    await api.get('/api/users')
+      .set('Authorization', 'Bearer ' + auth.token)
+      .expect(200)
+      .then((res) => {
+        for (const user of res.body) {
+          expect(user).toHaveProperty('id');
+        }
+      });
+  });
+
   it('/users (POST)', () => {
     const user: RegisterDto = {
       username: uuid().substr(0, 10),
