@@ -311,6 +311,11 @@ describe('UserController (e2e)', () => {
     const userInstance = await userService.findUserById(auth.userId);
     const roomId = await utils.createRoom(auth.token);
 
+    await roomService.addPlayer({
+      roomId,
+      user: userInstance,
+    });
+
     await roomService.startRoom({
       roomId,
       user: userInstance,

@@ -25,6 +25,9 @@ export class RoomDto extends BaseModelDto {
   readonly playersIds: string[];
 
   @ApiModelProperty()
+  readonly connectedPlayersIds: string[];
+
+  @ApiModelProperty()
   readonly usernames: string[];
 
   @ApiModelProperty()

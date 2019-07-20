@@ -23,6 +23,7 @@ export class RoomMapper extends BaseMapper<RoomDto, Room> {
       usernames: 'usernames',
       timeout: 'timeout',
       code: 'code',
+      connectedPlayersIds: 'connectedPlayersIds',
     });
   }
 

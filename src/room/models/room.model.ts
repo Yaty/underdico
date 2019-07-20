@@ -106,6 +106,12 @@ export class Room extends BaseModel<Room> {
 
   @arrayProp({
     default: [],
+    itemsRef: User,
+  })
+  connectedPlayersIds: Array<Ref<User>>;
+
+  @arrayProp({
+    default: [],
     items: String,
   })
   tags: string[];

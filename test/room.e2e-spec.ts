@@ -7,11 +7,13 @@ import TestUtils from './utils';
 import { CreateRoomDto } from '../src/room/dto/create-room.dto';
 import * as uuid from 'uuid/v4';
 import { RoomService } from '../src/room/room.service';
+import { UserService } from '../src/user/user.service';
 
 describe('RoomController (e2e)', () => {
   let app: INestApplication;
   let utils: TestUtils;
   let roomService: RoomService;
+  let userService: UserService;
   let api;
 
   beforeAll(async () => {
@@ -23,6 +25,7 @@ describe('RoomController (e2e)', () => {
     configure(app);
     await app.init();
     roomService = moduleFixture.get<RoomService>(RoomService);
+    userService = moduleFixture.get<UserService>(UserService);
     api = supertest(app.getHttpServer());
     utils = new TestUtils(api);
   });
@@ -66,6 +69,11 @@ describe('RoomController (e2e)', () => {
     const auth = await utils.login(user);
     const roomId = await utils.createRoom(auth.token);
 
+    await roomService.addPlayer({
+      user: await userService.findUserById(auth.userId),
+      roomId,
+    });
+
     return api.get('/api/rooms')
       .expect(200)
       .then((res) => {
@@ -99,7 +107,8 @@ describe('RoomController (e2e)', () => {
         expect(res.body.maxPlayers).toEqual(10);
         expect(res.body.ownerId).toEqual(auth.userId);
         expect(res.body.playersIds).toEqual([auth.userId]);
-        expect(res.body.usernames[0]).toEqual(user.username);
+        expect(res.body.usernames.length).toEqual(0);
+        expect(res.body.connectedPlayersIds.length).toEqual(0);
         expect(typeof res.body.code === 'undefined').toBeTruthy();
       });
   });

@@ -99,7 +99,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     pipeline.push({
       $lookup: {
         from: 'users',
-        localField: 'playersIds',
+        localField: 'connectedPlayersIds',
         foreignField: '_id',
         as: 'users',
       },
@@ -157,7 +157,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     const room = await this.roomModel.findById(dto.roomId).lean().exec();
 
-    if (room.playersIds.includes(dto.user._id.toString())) {
+    if (room.connectedPlayersIds.find((playerId) => playerId.toString() === dto.user._id.toString())) {
       return;
     }
 
@@ -165,7 +165,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
       throw new UnauthorizedException('This room is private, wrong code');
     }
 
-    if (room.playersIds.length >= room.maxPlayers) {
+    if (room.connectedPlayersIds.length >= room.maxPlayers) {
       throw new ForbiddenException('Max player reached');
     }
 
@@ -174,6 +174,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     }, {
       $addToSet: {
         playersIds: dto.user._id,
+        connectedPlayersIds: dto.user._id,
       },
     }).exec();
   }
@@ -187,13 +188,13 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     const room = await this.roomModel.findByIdAndUpdate(dto.roomId, {
       $pull: {
-        playersIds: dto.user._id,
+        connectedPlayersIds: dto.user._id,
       },
     }, {
       new: true,
     }).lean().exec();
 
-    if (room.playersIds.length === 0) {
+    if (room.connectedPlayersIds.length === 0) {
       await this.stop(dto.roomId);
     }
   }
@@ -243,7 +244,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
     }
 
     const currentPlayerId = RoomService.toObjectId(
-      room.playersIds[Math.floor(Math.random() * room.playersIds.length)].toString(),
+      room.connectedPlayersIds[Math.floor(Math.random() * room.connectedPlayersIds.length)].toString(),
     );
 
     const updatedRoom: Room = await this.roomModel.findOneAndUpdate({
@@ -363,11 +364,11 @@ export class RoomService extends BaseService<Room, RoomDto> {
 
     const room = await this.findRoomById(roomId);
 
-    const currentPlayerIndex = room.playersIds.findIndex(
+    const currentPlayerIndex = room.connectedPlayersIds.findIndex(
       (playerId) => playerId.toString() === room.rounds[room.rounds.length - 1].currentPlayerId.toString(),
     );
 
-    const nextPlayerId = room.playersIds[(currentPlayerIndex + 1) % room.playersIds.length];
+    const nextPlayerId = room.connectedPlayersIds[(currentPlayerIndex + 1) % room.connectedPlayersIds.length];
     const key: string = `rounds.${room.rounds.length - 1}.currentPlayerId`;
 
     await this.roomModel.updateOne({
@@ -401,7 +402,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
             nextPlayerId,
           });
 
-          if (room.playersIds.length > 1) {
+          if (room.connectedPlayersIds.length > 1) {
             await this.handleTimeout(roomId, roundId, RoomService.toObjectId(nextPlayerId));
           }
         }
@@ -440,7 +441,7 @@ export class RoomService extends BaseService<Room, RoomDto> {
   }
 
   async getUserScore(userId: string): Promise<number> {
-    const userRooms = await this.findUserRooms(userId, RoomStatus.Terminated);
+    const userRooms = await this.findUserRooms(userId);
 
     return userRooms.reduce((totalScore, room) =>
       totalScore +

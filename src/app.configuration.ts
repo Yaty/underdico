@@ -19,7 +19,7 @@ class ExposeHeadersInterceptor implements NestInterceptor {
 }
 
 export function configure(app) {
-  const hostDomain = AppModule.isDev ? `${AppModule.host}:${AppModule.port}` : AppModule.host;
+  const hostDomain = AppModule.isDev ? `https://${AppModule.host}:${AppModule.port}` : AppModule.host;
 
   const swaggerOptions = new DocumentBuilder()
     .setTitle(packageJson.name)
@@ -27,6 +27,7 @@ export function configure(app) {
     .setVersion(packageJson.version)
     .setBasePath('/api')
     .addBearerAuth('Authorization', 'header', 'apiKey')
+    .setSchemes('https')
     .build();
 
   const swaggerDoc = SwaggerModule.createDocument(app, swaggerOptions);
