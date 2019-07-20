@@ -13,7 +13,6 @@ import { GetOperationId } from '../shared/utilities/get-operation-id.helper';
 import { Roles } from '../shared/decorators/roles.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../shared/guards/roles.guard';
-import { StorageService } from '../shared/storage/storage.service';
 import { RoomService } from '../room/room.service';
 import { VoteService } from '../vote/vote.service';
 import { WordService } from '../word/word.service';
@@ -29,7 +28,6 @@ import { FindByIdParamsDto } from '../user/dto/find-by-id-params.dto';
 export class GDPRController {
   constructor(
     private readonly userService: UserService,
-    private readonly storageService: StorageService,
     private readonly roomService: RoomService,
     private readonly voteService: VoteService,
     private readonly wordService: WordService,
