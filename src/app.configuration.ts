@@ -7,8 +7,7 @@ import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { RedisIoAdapter } from './shared/adapters/redis-io.adapter';
 import { Observable } from 'rxjs';
 import { json } from 'body-parser';
-
-const jsonMiddleware = json();
+import { join } from 'path';
 
 class ExposeHeadersInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
@@ -20,6 +19,8 @@ class ExposeHeadersInterceptor implements NestInterceptor {
 
 export function configure(app) {
   const hostDomain = AppModule.isDev ? `https://${AppModule.host}:${AppModule.port}` : AppModule.host;
+
+  app.useStaticAssets(join(__dirname, '../static'));
 
   const swaggerOptions = new DocumentBuilder()
     .setTitle(packageJson.name)
